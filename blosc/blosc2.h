@@ -280,6 +280,7 @@ enum {
   BLOSC2_ERROR_FILE_TRUNCATE = -25,   //!< File truncate failure
   BLOSC2_ERROR_THREAD_CREATE = -26,   //!< Thread or thread context creation failure
   BLOSC2_ERROR_POSTFILTER = -27,      //!< Postfilter failure
+  BLOSC2_ERROR_FILE_REMOVE = -28,     //!< Remove file failure
 };
 
 /**
@@ -1363,6 +1364,17 @@ BLOSC_EXPORT int blosc2_schunk_update_chunk(blosc2_schunk *schunk, int nchunk, u
  * detected, this number will be negative.
  */
 BLOSC_EXPORT int blosc2_schunk_insert_chunk(blosc2_schunk *schunk, int nchunk, uint8_t *chunk, bool copy);
+
+/**
+ * @brief Delete a chunk at a specific position in a super-chunk.
+ *
+ * @param schunk The super-chunk where the chunk will be deleted.
+ * @param nchunk The position where the chunk will be deleted.
+ *
+ * @return The number of chunks in super-chunk. If some problem is
+ * detected, this number will be negative.
+ */
+BLOSC_EXPORT int blosc2_schunk_delete_chunk(blosc2_schunk *schunk, int nchunk);
 
 /**
  * @brief Append a @p src data buffer to a super-chunk.
