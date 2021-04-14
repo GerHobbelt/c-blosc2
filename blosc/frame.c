@@ -1554,7 +1554,7 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy) {
   // Decompress offsets
   blosc2_dparams off_dparams = BLOSC2_DPARAMS_DEFAULTS;
   blosc2_context *dctx = blosc2_create_dctx(off_dparams);
-  int64_t* offsets = (int64_t *) malloc((size_t)nchunks * 8);
+  int64_t* offsets = (int64_t *) malloc((size_t)nchunks * sizeof(int64_t));
   int32_t off_nbytes = blosc2_decompress_ctx(dctx, coffsets, coffsets_cbytes,
                                              offsets, nchunks * sizeof(int64_t));
   blosc2_free_ctx(dctx);
@@ -2317,7 +2317,7 @@ void* frame_insert_chunk(blosc2_frame_s* frame, int nchunk, void* chunk, blosc2_
   }
 
   // Get the current offsets
-  int32_t off_nbytes = (nchunks + 1) * 8;
+  int32_t off_nbytes = (nchunks + 1) * sizeof(int64_t);
   int64_t* offsets = (int64_t *) malloc((size_t)off_nbytes);
   if (nchunks > 0) {
     int32_t coffsets_cbytes = 0;
@@ -2333,7 +2333,7 @@ void* frame_insert_chunk(blosc2_frame_s* frame, int nchunk, void* chunk, blosc2_
     // Decompress offsets
     blosc2_dparams off_dparams = BLOSC2_DPARAMS_DEFAULTS;
     blosc2_context *dctx = blosc2_create_dctx(off_dparams);
-    int32_t prev_nbytes = blosc2_decompress_ctx(dctx, coffsets, coffsets_cbytes, offsets, nchunks * 8);
+    int32_t prev_nbytes = blosc2_decompress_ctx(dctx, coffsets, coffsets_cbytes, offsets, nchunks * sizeof(int64_t));
     blosc2_free_ctx(dctx);
     if (prev_nbytes < 0) {
       free(offsets);
@@ -2390,7 +2390,7 @@ void* frame_insert_chunk(blosc2_frame_s* frame, int nchunk, void* chunk, blosc2_
 
   // Re-compress the offsets again
   blosc2_context* cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
-  cctx->typesize = 8;
+  cctx->typesize = sizeof(int64_t);
   void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
   int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes,
                                                off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
@@ -2506,8 +2506,9 @@ void* frame_update_chunk(blosc2_frame_s* frame, int nchunk, void* chunk, blosc2_
   if (rc < 0) {
     return NULL;
   }
+
   // Get the current offsets
-  int32_t off_nbytes = nchunks * 8;
+  int32_t off_nbytes = nchunks * sizeof(int64_t);
   int64_t* offsets = (int64_t *) malloc((size_t)off_nbytes);
   if (nchunks > 0) {
     int32_t coffsets_cbytes = 0;
@@ -2523,7 +2524,7 @@ void* frame_update_chunk(blosc2_frame_s* frame, int nchunk, void* chunk, blosc2_
     // Decompress offsets
     blosc2_dparams off_dparams = BLOSC2_DPARAMS_DEFAULTS;
     blosc2_context *dctx = blosc2_create_dctx(off_dparams);
-    int32_t prev_nbytes = blosc2_decompress_ctx(dctx, coffsets, coffsets_cbytes, offsets, nchunks * 8);
+    int32_t prev_nbytes = blosc2_decompress_ctx(dctx, coffsets, coffsets_cbytes, offsets, nchunks * sizeof(int64_t));
     blosc2_free_ctx(dctx);
     if (prev_nbytes < 0) {
       free(offsets);
@@ -2597,7 +2598,7 @@ void* frame_update_chunk(blosc2_frame_s* frame, int nchunk, void* chunk, blosc2_
   }
   // Re-compress the offsets again
   blosc2_context* cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
-  cctx->typesize = 8;
+  cctx->typesize = sizeof(int64_t);
   void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
   int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes,
                                                off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
@@ -2703,7 +2704,7 @@ void* frame_delete_chunk(blosc2_frame_s* frame, int nchunk, blosc2_schunk* schun
   }
 
   // Get the current offsets
-  int32_t off_nbytes = (nchunks) * 8;
+  int32_t off_nbytes = (nchunks) * sizeof(int64_t);
   int64_t* offsets = (int64_t *) malloc((size_t)off_nbytes);
   if (nchunks > 0) {
     int32_t coffsets_cbytes = 0;
@@ -2719,7 +2720,7 @@ void* frame_delete_chunk(blosc2_frame_s* frame, int nchunk, blosc2_schunk* schun
     // Decompress offsets
     blosc2_dparams off_dparams = BLOSC2_DPARAMS_DEFAULTS;
     blosc2_context *dctx = blosc2_create_dctx(off_dparams);
-    int32_t prev_nbytes = blosc2_decompress_ctx(dctx, coffsets, coffsets_cbytes, offsets, nchunks * 8);
+    int32_t prev_nbytes = blosc2_decompress_ctx(dctx, coffsets, coffsets_cbytes, offsets, nchunks * sizeof(int64_t));
     blosc2_free_ctx(dctx);
     if (prev_nbytes < 0) {
       free(offsets);
@@ -2736,9 +2737,9 @@ void* frame_delete_chunk(blosc2_frame_s* frame, int nchunk, blosc2_schunk* schun
 
   // Re-compress the offsets again
   blosc2_context* cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
-  cctx->typesize = 8;
+  cctx->typesize = sizeof(int64_t);
   void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
-  int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes - 8,
+  int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes - sizeof(int64_t),
                                                off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
   blosc2_free_ctx(cctx);
 
