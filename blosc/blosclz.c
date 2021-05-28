@@ -397,6 +397,7 @@ static uint8_t* get_run_or_match(uint8_t* ip, uint8_t* ip_bound, const uint8_t* 
 
 // Get the compressed size of a buffer.  Useful for testing compression ratios for high clevels.
 static int get_csize(uint8_t* ibase, int maxlen, bool force_3b_shift) {
+  uint32_t maxlen8 = maxlen / 8;
   uint8_t* ip = ibase;
   int32_t oc = 0;
   uint8_t* ip_bound = ibase + maxlen - 1;
@@ -490,18 +491,25 @@ static int get_csize(uint8_t* ibase, int maxlen, bool force_3b_shift) {
     /* update the hash at match boundary */
     seq = BLOSCLZ_READU32(ip);
     HASH_FUNCTION(hval, seq, HASH_LOG)
-    htab[hval] = (uint32_t) (ip++ - ibase);
+    htab[hval] = (uint32_t)(ip++ - ibase);
     seq >>= 8U;
     HASH_FUNCTION(hval, seq, HASH_LOG)
     htab[hval] = (uint32_t) (ip++ - ibase);
     /* assuming literal copy */
     oc++;
 
-  }
+    // Exit early if we are detecting compression
+    int32_t ic = (int32_t)(ip - ibase);
+    if ((ic > (maxlen / 8)) && (oc < 2 * ic)) {
+      // In case that we are testing 4 bytes vs 3 bytes,
+      // prefer the earlier (based on experiments).
+      //return 1 + force_3b_shift;
+      // Finally we use the next one, based on experiments
+      // witn python-blosc2.
+      return oc;
+    }
 
-  /* if we have copied something, adjust the copy length */
-  if (!copy)
-    oc--;
+  }
 
   return (int)oc;
 }
@@ -523,7 +531,7 @@ int blosclz_compress(const int clevel, const void* input, int length,
   op_limit = op + maxout;
 
   // Minimum lengths for encoding
-  unsigned minlen_[10] = {0, 12, 12, 11, 10, 9, 8, 7, 6, 5};
+  unsigned minlen_[10] = {0, 16, 12, 11, 10, 9, 8, 7, 6, 5};
 
   // Minimum compression ratios for initiate encoding
   double cratio_[10] = {0, 2, 2, 2, 2, 1.8, 1.6, 1.4, 1.2, 1.1};
@@ -573,8 +581,9 @@ int blosclz_compress(const int clevel, const void* input, int length,
       cratio = (double)maxlen / csize_4b;
       break;
     case 9:
-      // case 9 is special.  we need to asses the optimal shift
-      maxlen = length / 8;
+      // case 9 is special.  we need to assess the optimal shift
+      // maxlen can be quite less here because the blocksize is larger
+      maxlen = length / 16;
       csize_3b = get_csize(ibase, maxlen, true);
       csize_4b = get_csize(ibase, maxlen, false);
       ipshift = (csize_3b < csize_4b) ? 3 : 4;

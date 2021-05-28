@@ -32,9 +32,9 @@ if(NOT DEACTIVATE_ZSTD)
     if(ZSTD_FOUND)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_INCLUDE_DIR})
     else()
-        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.4.9)
+        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.0)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_LOCAL_DIR}
-                ${ZSTD_LOCAL_DIR}/common ${ZSTD_LOCAL_DIR}/dictBuilder)
+                ${ZSTD_LOCAL_DIR}/common)
     endif()
 endif()
 
@@ -194,7 +194,7 @@ if(COMPILER_SUPPORT_NEON)
         # Only armv7l needs special -mfpu=neon flag; aarch64 doesn't.
       set_source_files_properties(
             shuffle-neon.c bitshuffle-neon.c
-            PROPERTIES COMPILE_FLAGS "-mfpu=neon")
+            PROPERTIES COMPILE_FLAGS "-mfpu=neon -flax-vector-conversions")
     endif()
     # Define a symbol for the shuffle-dispatch implementation
     # so it knows NEON is supported even though that file is

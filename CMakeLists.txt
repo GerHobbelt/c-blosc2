@@ -66,7 +66,7 @@ if(NOT WIN32)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 endif()
 
-cmake_minimum_required(VERSION 2.8.10)
+cmake_minimum_required(VERSION 3.16.3)
 if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.4)
   cmake_policy(SET CMP0063 NEW)
 endif()
@@ -159,7 +159,7 @@ if(NOT DEACTIVATE_ZLIB)
 endif()
 
 if (HAVE_ZLIB_NG)
-    set(ZLIB_NG_DIR "zlib-ng-2.0.2")  # update to the actual included version
+    set(ZLIB_NG_DIR "zlib-ng-2.0.3")  # update to the actual included version
     add_definitions(-DZLIB_COMPAT)
     set(ZLIB_COMPAT TRUE)
     set(SKIP_INSTALL_ALL TRUE)
@@ -215,23 +215,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
             "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-# Workaround for Darwin with new Apple Silicon (arm64)
-# For now, it is necessary to compile the beast with:
-# CC="clang -arch arm64" cmake ..
-if (CMAKE_C_COMPILER_ARG1)
-    string(FIND ${CMAKE_C_COMPILER_ARG1} "arm64" IS_APPLE_SILICON)
-    if (IS_APPLE_SILICON)
-        message(STATUS "Detected Apple arm64 arch")
-        set(CMAKE_SYSTEM_PROCESSOR "arm64")
-    endif()
-endif()
-
 # Based on the target system's processor and the compiler being used,
 # set build variables indicating which hardware features can be targeted
 # by the compiler. Note we DO NOT check which hardware features are supported
 # by this (the host) system, because we want to be able to support compiling
 # for newer hardware on older machines as well as cross-compilation.
 message(STATUS "Building for system processor ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "Building for compiler ID ${CMAKE_C_COMPILER_ID}")
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL i386 OR
         CMAKE_SYSTEM_PROCESSOR STREQUAL i686 OR
         CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR
@@ -246,7 +236,7 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL i386 OR
         else()
             set(COMPILER_SUPPORT_AVX2 FALSE)
         endif()
-    elseif(CMAKE_C_COMPILER_ID STREQUAL Clang)
+    elseif(CMAKE_C_COMPILER_ID STREQUAL Clang OR CMAKE_C_COMPILER_ID STREQUAL AppleClang)
         set(COMPILER_SUPPORT_SSE2 TRUE)
         if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 3.2 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 3.2)
             set(COMPILER_SUPPORT_AVX2 TRUE)
@@ -277,12 +267,12 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL armv7l OR
         CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64 OR
         CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
     if(CMAKE_C_COMPILER_ID STREQUAL GNU)
-        if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.7 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 4.7)
+        if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 5.2 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 5.2)
             set(COMPILER_SUPPORT_NEON TRUE)
         else()
             set(COMPILER_SUPPORT_NEON FALSE)
         endif()
-    elseif(CMAKE_C_COMPILER_ID STREQUAL Clang)
+    elseif(CMAKE_C_COMPILER_ID STREQUAL Clang OR CMAKE_C_COMPILER_ID STREQUAL AppleClang)
         if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 3.3 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 3.3)
             set(COMPILER_SUPPORT_NEON TRUE)
         else()
