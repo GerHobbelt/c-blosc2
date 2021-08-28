@@ -128,16 +128,16 @@ if(MINGW)
     endif()
 endif(MINGW)
 
-if (ENABLE_ASAN)
+if(ENABLE_ASAN)
     message(STATUS "Enabling ASAN")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Os -fno-omit-frame-pointer -fsanitize=address")
 endif()
 
-if ((BUILD_PLUGINS STREQUAL ON) AND (BUILD_LITE STREQUAL ON))
+if(BUILD_PLUGINS AND BUILD_LITE)
     message(FATAL_ERROR "Both plugins and lite Blosc versions can not be built at the same time.")
 endif()
 
-if(BUILD_LITE STREQUAL ON)
+if(BUILD_LITE)
     set(DEACTIVATE_ZLIB ON)
     set(DEACTIVATE_ZSTD ON)
 endif()
@@ -166,7 +166,7 @@ if(NOT DEACTIVATE_ZLIB)
     set(HAVE_ZLIB TRUE)
 endif()
 
-if (HAVE_ZLIB_NG)
+if(HAVE_ZLIB_NG)
     set(ZLIB_NG_DIR "zlib-ng-2.0.3")  # update to the actual included version
     add_definitions(-DZLIB_COMPAT)
     set(ZLIB_COMPAT TRUE)
@@ -178,7 +178,7 @@ if (HAVE_ZLIB_NG)
     file(COPY
             ${CMAKE_CURRENT_BINARY_DIR}/internal-complibs/${ZLIB_NG_DIR}/zconf.h
             DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/internal-complibs/${ZLIB_NG_DIR}/)
-endif ()
+endif()
 
 if(NOT DEACTIVATE_ZSTD)
     if(PREFER_EXTERNAL_ZSTD)
@@ -210,7 +210,8 @@ if(BUILD_PLUGINS)
 endif()
 
 # create the config.h file
-configure_file("blosc/config.h.in" "blosc/config.h")
+configure_file("${PROJECT_SOURCE_DIR}/blosc/config.h.in"
+               "${PROJECT_SOURCE_DIR}/blosc/config.h")
 
 # now make sure that you set the build directory on your "Include" path when compiling
 include_directories("${PROJECT_BINARY_DIR}/blosc/")
