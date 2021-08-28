@@ -228,6 +228,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
             "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+# Propagate CMAKE_OSX_ARCHITECTURES env variable into CMAKE_SYSTEM_PROCESSOR
+if(DEFINED ENV{CMAKE_OSX_ARCHITECTURES})
+    if($ENV{CMAKE_OSX_ARCHITECTURES} STREQUAL "arm64")
+        set(CMAKE_SYSTEM_PROCESSOR arm64)
+    endif()
+endif()
+
 # Based on the target system's processor and the compiler being used,
 # set build variables indicating which hardware features can be targeted
 # by the compiler. Note we DO NOT check which hardware features are supported
@@ -402,12 +409,14 @@ endif()
 
 # uninstall target
 if(BLOSC_INSTALL)
+    include(GNUInstallDirs)
+    set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
     configure_file(
-         "${CMAKE_CURRENT_SOURCE_DIR}/blosc.pc.in"
-         "${CMAKE_CURRENT_BINARY_DIR}/blosc.pc"
+         "${CMAKE_CURRENT_SOURCE_DIR}/blosc2.pc.in"
+         "${CMAKE_CURRENT_BINARY_DIR}/blosc2.pc"
          @ONLY)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/blosc.pc"
-            DESTINATION lib/pkgconfig COMPONENT DEV)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/blosc2.pc"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig" COMPONENT DEV)
      configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
         "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"

@@ -291,7 +291,9 @@ blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_storage *storage
     if (blosc2_vlmeta_get(schunk, name, &content, &content_len) < 0) {
       BLOSC_TRACE_ERROR("Can not get %s `vlmetalayer`.", name);
     }
-    if (blosc2_vlmeta_add(new_schunk, name, content, content_len, NULL) < 0) {
+    blosc2_cparams cparams2 = BLOSC2_CPARAMS_DEFAULTS;
+    cparams2.typesize = sizeof(uint8_t);
+    if (blosc2_vlmeta_add(new_schunk, name, content, content_len, &cparams2) < 0) {
       BLOSC_TRACE_ERROR("Can not add %s `vlmetalayer`.", name);
       return NULL;
     }
@@ -1410,4 +1412,28 @@ int blosc2_vlmeta_update(blosc2_schunk *schunk, const char *name, uint8_t *conte
   }
 
   return nvlmetalayer;
+}
+
+int blosc2_vlmeta_delete(blosc2_schunk *schunk, const char *name) {
+  int nvlmetalayer = blosc2_vlmeta_exists(schunk, name);
+  if (nvlmetalayer < 0) {
+    BLOSC_TRACE_ERROR("User vlmetalayer \"%s\" not found.", name);
+    return nvlmetalayer;
+  }
+
+  blosc2_metalayer *vlmetalayer = schunk->vlmetalayers[nvlmetalayer];
+  for (int i = nvlmetalayer; i < (schunk->nvlmetalayers - 1); i++) {
+    schunk->vlmetalayers[i] = schunk->vlmetalayers[i + 1];
+  }
+  free(vlmetalayer->content);
+  schunk->nvlmetalayers--;
+
+  // Propagate to frames
+  int rc = vlmetalayer_flush(schunk);
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Can not propagate de `%s` variable-length metalayer to a frame.", name);
+    return rc;
+  }
+
+  return schunk->nvlmetalayers;
 }
