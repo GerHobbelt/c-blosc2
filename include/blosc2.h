@@ -8,12 +8,14 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-/** @file blosc.h
- * @brief Blosc header file.
- *
- * This file contains Blosc public API and the structures needed to use it.
- * @author The Blosc Developers <blosc@blosc.org>
- */
+/*********************************************************************
+  @file blosc.h
+  @brief Blosc header file.
+
+  This file contains Blosc public API and the structures needed to use it.
+  @author The Blosc Developers <blosc@blosc.org>
+**********************************************************************/
+
 
 #ifndef BLOSC_H
 #define BLOSC_H
@@ -45,8 +47,8 @@ extern "C" {
 #define BLOSC_VERSION_MINOR    0    /* for minor interface/format changes  */
 #define BLOSC_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC_VERSION_STRING   "2.0.2-dev"  /* string version.  Sync with above! */
-#define BLOSC_VERSION_DATE     "$Date:: 2021-06-29 #$"    /* date version */
+#define BLOSC_VERSION_STRING   "2.0.2"  /* string version.  Sync with above! */
+#define BLOSC_VERSION_DATE     "$Date:: 2021-07-10 #$"    /* date version */
 
 
 /* Tracing macros */
@@ -140,6 +142,7 @@ enum {
   BLOSC_TRUNC_PREC = 4,  //!< Truncate precision filter.
   BLOSC_LAST_FILTER = 5, //!< sentinel
   BLOSC_LAST_REGISTERED_FILTER = BLOSC2_GLOBAL_REGISTERED_FILTERS_START + BLOSC2_GLOBAL_REGISTERED_FILTERS - 1,
+  //!< Determine the last registered filter. It is used to check if a filter is registered or not.
 };
 
 /**
@@ -195,7 +198,7 @@ enum {
   BLOSC_LAST_CODEC = 6,
   //!< Determine the last codec defined by Blosc.
   BLOSC_LAST_REGISTERED_CODEC = BLOSC2_GLOBAL_REGISTERED_CODECS_START + BLOSC2_GLOBAL_REGISTERED_CODECS - 1,
-  //!< Determine the last registered codec. It is used to check if a codec between 31 - 159 is registered or not.
+  //!< Determine the last registered codec. It is used to check if a codec is registered or not.
 };
 
 
@@ -797,7 +800,7 @@ typedef int64_t (*blosc2_tell_cb)(void *stream);
 typedef int     (*blosc2_seek_cb)(void *stream, int64_t offset, int whence);
 typedef int64_t (*blosc2_write_cb)(const void *ptr, int64_t size, int64_t nitems, void *stream);
 typedef int64_t (*blosc2_read_cb)(void *ptr, int64_t size, int64_t nitems, void *stream);
-typedef int64_t (*blosc2_truncate_cb)(void *stream, int64_t size);
+typedef int     (*blosc2_truncate_cb)(void *stream, int64_t size);
 
 
 /*
@@ -1557,7 +1560,7 @@ BLOSC_EXPORT int64_t blosc2_schunk_to_file(blosc2_schunk* schunk, const char* ur
 BLOSC_EXPORT int blosc2_schunk_free(blosc2_schunk *schunk);
 
 /**
- * @brief Append an existing @p chunk o a super-chunk.
+ * @brief Append an existing @p chunk to a super-chunk.
  *
  * @param schunk The super-chunk where the chunk will be appended.
  * @param chunk The @p chunk to append.  An internal copy is made, so @p chunk can be reused or
@@ -1966,7 +1969,7 @@ typedef struct {
 } blosc2_codec;
 
 /**
- * @brief Register a user-defined codec in Blosc.
+ * @brief Register locally a user-defined codec in Blosc.
  *
  * @param codec The codec to register.
  *
@@ -1995,7 +1998,7 @@ typedef struct {
 } blosc2_filter;
 
 /**
- * @brief Register a user-defined filter in Blosc.
+ * @brief Register locally a user-defined filter in Blosc.
  *
  * @param filter The filter to register.
  *

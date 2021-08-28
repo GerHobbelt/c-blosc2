@@ -12,8 +12,11 @@
 #include "blosc2/blosc2-stdio.h"
 
 void *blosc2_stdio_open(const char *urlpath, const char *mode, void *params) {
+  FILE *file = fopen(urlpath, mode);
+  if (file == NULL)
+    return NULL;
   blosc2_stdio_file *my_fp = malloc(sizeof(blosc2_stdio_file));
-  my_fp->file = fopen(urlpath, mode);
+  my_fp->file = file;
   return my_fp;
 }
 
@@ -26,21 +29,24 @@ int blosc2_stdio_close(void *stream) {
 
 int64_t blosc2_stdio_tell(void *stream) {
   blosc2_stdio_file *my_fp = (blosc2_stdio_file *) stream;
+  int64_t pos;
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
-  return _ftelli64(my_fp->file);
+  pos = _ftelli64(my_fp->file);
 #else
-  long pos = ftell(my_fp->file);
-  return (int64_t) pos;
+  pos = (int64_t)ftell(my_fp->file);
 #endif
+  return pos;
 }
 
 int blosc2_stdio_seek(void *stream, int64_t offset, int whence) {
   blosc2_stdio_file *my_fp = (blosc2_stdio_file *) stream;
+  int rc;
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
-  return _fseeki64(my_fp->file, offset, whence);
+  rc = _fseeki64(my_fp->file, offset, whence);
 #else
-  return fseek(my_fp->file, (long) offset, whence);
+  rc = fseek(my_fp->file, (long) offset, whence);
 #endif
+  return rc;
 }
 
 int64_t blosc2_stdio_write(const void *ptr, int64_t size, int64_t nitems, void *stream) {
@@ -58,10 +64,11 @@ int64_t blosc2_stdio_read(void *ptr, int64_t size, int64_t nitems, void *stream)
 
 int blosc2_stdio_truncate(void *stream, int64_t size) {
   blosc2_stdio_file *my_fp = (blosc2_stdio_file *) stream;
-
+  int rc;
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
-  return _chsize_s( _fileno(my_fp->file), size);
+  rc = _chsize_s(_fileno(my_fp->file), size);
 #else
-  return ftruncate(fileno(my_fp->file), size);
+  rc = ftruncate(fileno(my_fp->file), size);
 #endif
+  return rc;
 }
