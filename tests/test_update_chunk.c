@@ -54,14 +54,7 @@ int32_t *data_dest;
 
 static char* test_update_chunk(void) {
   /* Free resources */
-  if (tdata.urlpath != NULL) {
-    if (!tdata.contiguous) {
-      blosc2_remove_dir(tdata.urlpath);
-    }
-    else {
-      remove(tdata.urlpath);
-    }
-  }
+  blosc2_remove_urlpath(tdata.urlpath);
 
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
   int dsize;
@@ -124,6 +117,12 @@ static char* test_update_chunk(void) {
       int32_t a = data_dest[j];
       mu_assert("ERROR: bad roundtrip", a == i);
     }
+  }
+
+  // Check that the chunks can be decompressed
+  for (int nchunk = 0; nchunk < tdata.nchunks; nchunk++) {
+    dsize = blosc2_schunk_decompress_chunk(schunk, nchunk, (void *) data_dest, isize);
+    mu_assert("ERROR: chunk cannot be decompressed correctly", dsize >= 0);
   }
   /* Free resources */
   if (!storage.contiguous && storage.urlpath != NULL) {

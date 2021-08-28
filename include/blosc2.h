@@ -43,9 +43,9 @@ extern "C" {
 /* Version numbers */
 #define BLOSC_VERSION_MAJOR    2    /* for major interface/format changes  */
 #define BLOSC_VERSION_MINOR    0    /* for minor interface/format changes  */
-#define BLOSC_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
+#define BLOSC_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC_VERSION_STRING   "2.0.1"  /* string version.  Sync with above! */
+#define BLOSC_VERSION_STRING   "2.0.2-dev"  /* string version.  Sync with above! */
 #define BLOSC_VERSION_DATE     "$Date:: 2021-06-29 #$"    /* date version */
 
 
@@ -547,7 +547,7 @@ BLOSC_EXPORT void blosc_set_threads_callback(blosc_threads_callback callback, vo
  * @brief Returns the current number of threads that are used for
  * compression/decompression.
  */
-BLOSC_EXPORT int blosc_get_nthreads(void);
+BLOSC_EXPORT int16_t blosc_get_nthreads(void);
 
 
 /**
@@ -560,7 +560,7 @@ BLOSC_EXPORT int blosc_get_nthreads(void);
  *
  * @return The previous number of threads.
  */
-BLOSC_EXPORT int blosc_set_nthreads(int nthreads);
+BLOSC_EXPORT int16_t blosc_set_nthreads(int16_t nthreads);
 
 
 /**
@@ -984,7 +984,7 @@ static const blosc2_cparams BLOSC2_CPARAMS_DEFAULTS = {
   (zero) in the fields of the struct is passed to a function.
  */
 typedef struct {
-  int nthreads;
+  int16_t nthreads;
   //!< The number of threads to use internally (1).
   void* schunk;
   //!< The associated schunk, if any (NULL).
@@ -2012,6 +2012,11 @@ BLOSC_EXPORT int blosc2_register_filter(blosc2_filter *filter);
  * Remove a directory and its files.
  */
 BLOSC_EXPORT int blosc2_remove_dir(const char *path);
+
+/*
+ * Remove a file or a directory given by path.
+ */
+BLOSC_EXPORT int blosc2_remove_urlpath(const char *path);
 
 #ifdef __cplusplus
 }
