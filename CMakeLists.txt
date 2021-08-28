@@ -15,10 +15,12 @@
 #       build the benchmark programs
 #   BUILD_EXAMPLES: default ON
 #       build the examples programs
+#   BUILD_PLUGINS: default ON
+#       build the plugins programs
+#   BUILD_LITE: default OFF
+#       build a lite version (only with BloscLZ and LZ4/LZ4HC) of the blosc library
 #   DEACTIVATE_AVX2: default OFF
 #       do not attempt to build with AVX2 instructions
-#   DEACTIVATE_LZ4: default OFF
-#       do not include support for the LZ4 library
 #   DEACTIVATE_ZLIB: default OFF
 #       do not include support for the Zlib library
 #   DEACTIVATE_ZSTD: default OFF
@@ -98,10 +100,12 @@ option(BUILD_BENCHMARKS
     "Build benchmark programs form the blosc compression library" ON)
 option(BUILD_EXAMPLES
     "Build example programs form the blosc compression library" ON)
+option(BUILD_PLUGINS
+    "Build plugins programs form the blosc compression library" ON)
+option(BUILD_LITE
+    "Build a lite version (only with BloscLZ and LZ4/LZ4HC) of the blosc library." OFF)
 option(DEACTIVATE_AVX2
     "Do not attempt to build with AVX2 instructions" OFF)
-option(DEACTIVATE_LZ4
-    "Do not include support for the LZ4 library." OFF)
 option(DEACTIVATE_ZLIB
     "Do not include support for the ZLIB library." OFF)
 option(DEACTIVATE_ZSTD
@@ -129,15 +133,19 @@ if (ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Os -fno-omit-frame-pointer -fsanitize=address")
 endif()
 
-if(NOT DEACTIVATE_LZ4)
-    if(PREFER_EXTERNAL_LZ4)
-        find_package(LZ4)
-    else()
-        message(STATUS "Using LZ4 internal sources.")
-    endif()
-    # HAVE_LZ4 will be set to true because even if the library is
-    # not found, we will use the included sources for it
-    set(HAVE_LZ4 TRUE)
+if ((BUILD_PLUGINS STREQUAL ON) AND (BUILD_LITE STREQUAL ON))
+    message(FATAL_ERROR "Both plugins and lite Blosc versions can not be built at the same time.")
+endif()
+
+if(BUILD_LITE STREQUAL ON)
+    set(DEACTIVATE_ZLIB ON)
+    set(DEACTIVATE_ZSTD ON)
+endif()
+
+if(PREFER_EXTERNAL_LZ4)
+    find_package(LZ4)
+else()
+    message(STATUS "Using LZ4 internal sources.")
 endif()
 
 if(NOT DEACTIVATE_ZLIB)
@@ -195,6 +203,10 @@ if(NOT DEACTIVATE_IPP)
         message(STATUS "Not using IPP accelerated compression.")
         set(HAVE_IPP FALSE)
     endif()
+endif()
+
+if(BUILD_PLUGINS)
+    set(HAVE_PLUGINS TRUE)
 endif()
 
 # create the config.h file
@@ -353,7 +365,7 @@ endif()
 
 
 # include directories
-include_directories(include include/blosc2)
+include_directories(include)
 
 # subdirectories
 add_subdirectory(blosc)
@@ -379,6 +391,11 @@ endif()
 
 if(BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+if(BUILD_PLUGINS)
+    enable_testing()
+    add_subdirectory(plugins)
 endif()
 
 

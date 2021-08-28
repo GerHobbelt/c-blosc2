@@ -10,13 +10,11 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 # includes
 set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
-if(NOT DEACTIVATE_LZ4)
-    if(LZ4_FOUND)
-        set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${LZ4_INCLUDE_DIR})
-    else()
-        set(LZ4_LOCAL_DIR ${INTERNAL_LIBS}/lz4-1.9.3)
-        set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${LZ4_LOCAL_DIR})
-    endif()
+if(LZ4_FOUND)
+    set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${LZ4_INCLUDE_DIR})
+else()
+    set(LZ4_LOCAL_DIR ${INTERNAL_LIBS}/lz4-1.9.3)
+    set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${LZ4_LOCAL_DIR})
 endif()
 
 if(NOT DEACTIVATE_ZLIB)
@@ -68,7 +66,8 @@ set(SOURCES ${SOURCES} shuffle.c)
 set(lib_dir lib${LIB_SUFFIX})
 set(version_string ${BLOSC_VERSION_MAJOR}.${BLOSC_VERSION_MINOR}.${BLOSC_VERSION_PATCH})
 
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE) # pre 3.1
+set(THREADS_PREFER_PTHREAD_FLAG TRUE) # CMake 3.1+
 if(WIN32)
     # try to use the system library
     find_package(Threads)
@@ -76,21 +75,27 @@ if(WIN32)
         message(STATUS "using the internal pthread library for win32 systems.")
         set(SOURCES ${SOURCES} win32/pthread.c)
     else()
-        set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
+        if(CMAKE_VERSION VERSION_LESS 3.1)
+            set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
+        else()
+            set(LIBS ${LIBS} Threads::Threads)
+        endif()
     endif()
 else()
     find_package(Threads REQUIRED)
-    set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
+    if(CMAKE_VERSION VERSION_LESS 3.1)
+        set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
+    else()
+        set(LIBS ${LIBS} Threads::Threads)
+    endif()
 endif()
 
-if(NOT DEACTIVATE_LZ4)
-    if(LZ4_FOUND)
-        set(LIBS ${LIBS} ${LZ4_LIBRARY})
-    else()
-        file(GLOB LZ4_FILES ${LZ4_LOCAL_DIR}/*.c)
-        set(SOURCES ${SOURCES} ${LZ4_FILES})
-        source_group("LZ4" FILES ${LZ4_FILES})
-    endif()
+if(LZ4_FOUND)
+    set(LIBS ${LIBS} ${LZ4_LIBRARY})
+else()
+    file(GLOB LZ4_FILES ${LZ4_LOCAL_DIR}/*.c)
+    set(SOURCES ${SOURCES} ${LZ4_FILES})
+    source_group("LZ4" FILES ${LZ4_FILES})
 endif()
 
 if(NOT DEACTIVATE_ZLIB)
@@ -127,6 +132,22 @@ if(UNIX AND NOT APPLE)
     set(LIBS ${LIBS} "rt")
     set(LIBS ${LIBS} "m")
 endif()
+
+if (BUILD_PLUGINS)
+    file(GLOB CODECS_FILES ${PROJECT_SOURCE_DIR}/plugins/codecs/*/*.c ${PROJECT_SOURCE_DIR}/plugins/codecs/codecs-registry.c)
+    file(GLOB CODECS_RM_FILES ${PROJECT_SOURCE_DIR}/plugins/codecs/*/test_*.c)
+    foreach(file ${CODECS_RM_FILES})
+        list(REMOVE_ITEM CODECS_FILES ${file})
+    endforeach()
+    file(GLOB FILTERS_FILES ${PROJECT_SOURCE_DIR}/plugins/filters/*/*.c ${PROJECT_SOURCE_DIR}/plugins/filters/filters-registry.c)
+    file(GLOB FILTERS_RM_FILES ${PROJECT_SOURCE_DIR}/plugins/filters/*/test_*.c)
+    foreach(file ${FILTERS_RM_FILES})
+        list(REMOVE_ITEM FILTERS_FILES ${file})
+    endforeach()
+    set(PLUGINS_FILES ${CODECS_FILES} ${FILTERS_FILES})
+  #  message(STATUS "PLUGINS_FILES = ${PLUGINS_FILES}")
+    set(SOURCES ${SOURCES} ${PLUGINS_FILES})
+endif ()
 
 # targets
 if(BUILD_SHARED)
@@ -231,13 +252,6 @@ if(BUILD_TESTS)
     set_property(
             TARGET blosc_testing
             APPEND PROPERTY COMPILE_DEFINITIONS BLOSC_TESTING)
-    # TEMP : CMake doesn't automatically add -lpthread here like it does
-    # for the blosc2_shared target. Force it for now.
-    if(UNIX)
-        set_property(
-                TARGET blosc_testing
-                APPEND PROPERTY LINK_FLAGS "-lpthread")
-    endif()
 endif()
 
 if(BUILD_SHARED)
@@ -260,12 +274,20 @@ if(BUILD_STATIC)
     target_include_directories(blosc2_static PUBLIC ${BLOSC_INCLUDE_DIRS})
 endif()
 
-
 # install
 if(BLOSC_INSTALL)
     install(FILES ../include/blosc2.h DESTINATION include COMPONENT DEV)
-    install(FILES ../include/blosc2/blosc2-export.h ../include/blosc2/blosc2-common.h
+    install(FILES
+            ../include/blosc2/blosc2-export.h
+            ../include/blosc2/blosc2-common.h
+            ../include/blosc2/blosc2-stdio.h
             DESTINATION include/blosc2 COMPONENT DEV)
+    if(BUILD_PLUGINS)
+        install(FILES
+                ../plugins/filters/filters-registry.h
+                ../plugins/codecs/codecs-registry.h
+                DESTINATION include/blosc2 COMPONENT DEV)
+    endif()
 
     if(BUILD_SHARED)
         install(TARGETS blosc2_shared
@@ -277,6 +299,6 @@ if(BLOSC_INSTALL)
         install(TARGETS blosc2_static
                 LIBRARY DESTINATION ${lib_dir}
                 ARCHIVE DESTINATION ${lib_dir}
-                RUNTIME DESTINATION bin COMPONENT DEV)
+                RUNTIME DESTINATION bin COMPONENT LIB)
     endif()
 endif()

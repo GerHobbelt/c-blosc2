@@ -203,6 +203,7 @@ blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_storage *storage
     cparams.typesize = schunk->cctx->typesize;
     cparams.clevel = schunk->cctx->clevel;
     cparams.compcode = schunk->cctx->compcode;
+    cparams.compcode_meta = schunk->cctx->compcode_meta;
     cparams.use_dict = schunk->cctx->use_dict;
     cparams.blocksize = schunk->cctx->blocksize;
     memcpy(cparams.filters, schunk->cctx->filters, BLOSC2_MAX_FILTERS);
@@ -1073,6 +1074,11 @@ int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int nchunk, uint8_t **chu
 int blosc2_meta_exists(blosc2_schunk *schunk, const char *name) {
   if (strlen(name) > BLOSC2_METALAYER_NAME_MAXLEN) {
     BLOSC_TRACE_ERROR("Metalayers cannot be larger than %d chars.", BLOSC2_METALAYER_NAME_MAXLEN);
+    return BLOSC2_ERROR_INVALID_PARAM;
+  }
+
+  if (schunk == NULL) {
+    BLOSC_TRACE_ERROR("Schunk must not be NUll.");
     return BLOSC2_ERROR_INVALID_PARAM;
   }
 

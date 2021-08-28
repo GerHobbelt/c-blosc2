@@ -3,18 +3,20 @@
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
-  Example program demonstrating use of the Blosc filter from C code.
+   Example program demonstrating use of the Blosc filter from C code.
 
   To compile this program:
 
-  $ gcc udcodecs.c -o udcodecs -lblosc2
+  $ gcc urfilters.c -o urfilters -lblosc2
 
   To run:
 
-  $ ./udcodecs
-*/
+  $ ./urfilters
 
-#include <stdio.h>
+ */
+
+
+#include "stdio.h"
 #include <blosc2.h>
 
 #define KB  1024.
@@ -26,64 +28,49 @@
 #define NTHREADS 4
 
 
-int codec_encoder(const uint8_t* input, int32_t input_len,
-                  uint8_t* output, int32_t output_len,
-                  uint8_t meta,
-                  blosc2_cparams* cparams) {
-  if (cparams->schunk == NULL) {
-    return -1;
-  }
-  if (cparams->typesize != 4) {
-    BLOSC_TRACE_ERROR("Itemsize %d != 4", cparams->typesize);
-    return BLOSC2_ERROR_FAILURE;
-  }
+int filter_forward(const uint8_t* src, uint8_t* dest, int32_t size, uint8_t meta, blosc2_cparams *cparams) {
+  blosc2_schunk *schunk = cparams->schunk;
 
-  int32_t nelem = input_len / 4;
-  int32_t *in_ = ((int32_t *) input);
-  int32_t *out_ = ((int32_t *) output);
-
-  // Check that is an arange
-  int32_t start = in_[0];
-  int32_t step = in_[1] - start;
-  for (int i = 1; i < nelem - 1; ++i) {
-    if (in_[i + 1] - in_[i] != step) {
-      BLOSC_TRACE_ERROR("Buffer is not an arange");
-      return BLOSC2_ERROR_FAILURE;
+  for (int i = 0; i < size / schunk->typesize; ++i) {
+    switch (schunk->typesize) {
+      case 8:
+        ((int64_t *) dest)[i] = ((int64_t *) src)[i] + 1;
+        break;
+      case 4:
+        ((int32_t *) dest)[i] = ((int32_t *) src)[i] + 1;
+        break;
+      case 2:
+        ((int16_t *) dest)[i] = ((int16_t *) src)[i] + 1;
+        break;
+      default:
+        BLOSC_TRACE_ERROR("Item size %d not supported", schunk->typesize);
+        return BLOSC2_ERROR_FAILURE;
     }
   }
-
-  if (8 > output_len) {
-    return BLOSC2_ERROR_WRITE_BUFFER;
-  }
-  out_[0] = start;
-  out_[1] = step;
-
-  return 8;
+  return BLOSC2_ERROR_SUCCESS;
 }
 
-int codec_decoder(const uint8_t* input, int32_t input_len,
-                  uint8_t* output, int32_t output_len,
-                  uint8_t meta,
-                  blosc2_dparams *dparams) {
-  if (dparams->schunk == NULL) {
-    return -1;
-  }
-  int32_t nelem = output_len / 4;
-  int32_t *in_ = ((int32_t *) input);
-  int32_t *out_ = ((int32_t *) output);
+int filter_backward(const uint8_t* src, uint8_t* dest, int32_t size, uint8_t meta, blosc2_dparams *dparams) {
+  blosc2_schunk *schunk = dparams->schunk;
 
-  if (8 > input_len) {
-    return BLOSC2_ERROR_WRITE_BUFFER;
+  for (int i = 0; i < size / schunk->typesize; ++i) {
+    switch (schunk->typesize) {
+      case 8:
+        ((int64_t *) dest)[i] = ((int64_t *) src)[i] - 1;
+        break;
+      case 4:
+        ((int32_t *) dest)[i] = ((int32_t *) src)[i] - 1;
+        break;
+      case 2:
+        ((int16_t *) dest)[i] = ((int16_t *) src)[i] - 1;
+        break;
+      default:
+        BLOSC_TRACE_ERROR("Item size %d not supported", schunk->typesize);
+        return BLOSC2_ERROR_FAILURE;
+    }
   }
-  int32_t start = in_[0];
-  int32_t step = in_[1];
-  for (int i = 0; i < nelem; ++i) {
-    out_[i] = start + i * step;
-  }
-
-  return output_len;
+  return BLOSC2_ERROR_SUCCESS;
 }
-
 
 int main(void) {
   static int32_t data[CHUNKSIZE];
@@ -92,23 +79,19 @@ int main(void) {
   int dsize;
   int64_t nbytes, cbytes;
 
-  blosc2_codec udcodec;
-  udcodec.compcode = 244;
-  udcodec.compver = 1;
-  udcodec.complib = 1;
-  udcodec.compname = "udcodec";
-  udcodec.encoder = codec_encoder;
-  udcodec.decoder = codec_decoder;
+  blosc2_filter urfilter;
+    urfilter.id = 250;
+    urfilter.forward = filter_forward;
+    urfilter.backward = filter_backward;
 
-  blosc2_register_codec(&udcodec);
+  blosc2_register_filter(&urfilter);
 
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
-  cparams.compcode = 244;
+  cparams.filters[4] = urfilter.id;
+  cparams.filters_meta[4] = 0;
 
-  for (int i = 0; i < BLOSC2_MAX_FILTERS; ++i) {
-    cparams.filters[i] = 0;
-  }
   blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
+
 
   blosc2_schunk* schunk;
   int i, nchunk;

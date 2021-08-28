@@ -19,8 +19,6 @@
 
 #include "blosc2.h"
 #include "blosc-private.h"
-#include "blosc2-common.h"
-#include "blosc2-stdio.h"
 #include "frame.h"
 
 
@@ -34,15 +32,16 @@
 #include "trunc-prec.h"
 #include "blosclz.h"
 #include "stune.h"
+#include "config.h"
+#include <../plugins/codecs/codecs-registry.h>
+#include <../plugins/filters/filters-registry.h>
 
-#if defined(HAVE_LZ4)
-  #include "lz4.h"
-  #include "lz4hc.h"
-  #ifdef HAVE_IPP
-    #include <ipps.h>
-    #include <ippdc.h>
-  #endif
-#endif /*  HAVE_LZ4 */
+#include "lz4.h"
+#include "lz4hc.h"
+#ifdef HAVE_IPP
+  #include <ipps.h>
+  #include <ippdc.h>
+#endif
 #if defined(HAVE_ZLIB_NG)
   #include "zlib.h"
 #elif defined(HAVE_ZLIB)
@@ -260,12 +259,10 @@ int blosc_compcode_to_compname(int compcode, const char** compname) {
   /* Guess if there is support for this code */
   if (compcode == BLOSC_BLOSCLZ)
     code = BLOSC_BLOSCLZ;
-#if defined(HAVE_LZ4)
   else if (compcode == BLOSC_LZ4)
     code = BLOSC_LZ4;
   else if (compcode == BLOSC_LZ4HC)
     code = BLOSC_LZ4HC;
-#endif /* HAVE_LZ4 */
 #if defined(HAVE_ZLIB)
   else if (compcode == BLOSC_ZLIB)
     code = BLOSC_ZLIB;
@@ -286,14 +283,12 @@ int blosc_compname_to_compcode(const char* compname) {
   if (strcmp(compname, BLOSC_BLOSCLZ_COMPNAME) == 0) {
     code = BLOSC_BLOSCLZ;
   }
-#if defined(HAVE_LZ4)
   else if (strcmp(compname, BLOSC_LZ4_COMPNAME) == 0) {
     code = BLOSC_LZ4;
   }
   else if (strcmp(compname, BLOSC_LZ4HC_COMPNAME) == 0) {
     code = BLOSC_LZ4HC;
   }
-#endif /*  HAVE_LZ4 */
 #if defined(HAVE_ZLIB)
   else if (strcmp(compname, BLOSC_ZLIB_COMPNAME) == 0) {
     code = BLOSC_ZLIB;
@@ -320,10 +315,8 @@ int blosc_compname_to_compcode(const char* compname) {
 static int compcode_to_compformat(int compcode) {
   switch (compcode) {
     case BLOSC_BLOSCLZ: return BLOSC_BLOSCLZ_FORMAT;
-#if defined(HAVE_LZ4)
     case BLOSC_LZ4:     return BLOSC_LZ4_FORMAT;
     case BLOSC_LZ4HC:   return BLOSC_LZ4HC_FORMAT;
-#endif /*  HAVE_LZ4 */
 
 #if defined(HAVE_ZLIB)
     case BLOSC_ZLIB:    return BLOSC_ZLIB_FORMAT;
@@ -345,11 +338,8 @@ static int compcode_to_compversion(int compcode) {
   /* Write compressor format */
   switch (compcode) {
     case BLOSC_BLOSCLZ: return BLOSC_BLOSCLZ_VERSION_FORMAT;
-
-#if defined(HAVE_LZ4)
     case BLOSC_LZ4:     return BLOSC_LZ4_VERSION_FORMAT;
     case BLOSC_LZ4HC:   return BLOSC_LZ4HC_VERSION_FORMAT;
-#endif /*  HAVE_LZ4 */
 
 #if defined(HAVE_ZLIB)
     case BLOSC_ZLIB:    return BLOSC_ZLIB_VERSION_FORMAT;
@@ -371,7 +361,6 @@ static int compcode_to_compversion(int compcode) {
 }
 
 
-#if defined(HAVE_LZ4)
 static int lz4_wrap_compress(const char* input, size_t input_length,
                              char* output, size_t maxout, int accel, void* hash_table) {
   BLOSC_UNUSED_PARAM(accel);
@@ -433,7 +422,6 @@ static int lz4_wrap_decompress(const char* input, size_t compressed_length,
   }
   return (int)maxout;
 }
-#endif /* HAVE_LZ4 */
 
 #if defined(HAVE_ZLIB)
 /* zlib is not very respectful with sharing name space with others.
@@ -858,7 +846,7 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
   /* Process the filter pipeline */
   for (int i = 0; i < BLOSC2_MAX_FILTERS; i++) {
     int rc = BLOSC2_ERROR_SUCCESS;
-    if (filters[i] < BLOSC2_BDEFINED_FILTERS) {
+    if (filters[i] <= BLOSC2_DEFINED_FILTERS_STOP) {
       switch (filters[i]) {
         case BLOSC_SHUFFLE:
           for (int j = 0; j <= filters_meta[i]; j++) {
@@ -905,13 +893,13 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
             BLOSC_TRACE_ERROR("User-defined filter %d failed during compression\n", filters[i]);
             return NULL;
           }
-          goto udfiltersuccess;
+          goto urfiltersuccess;
         }
       }
       BLOSC_TRACE_ERROR("User-defined filter %d not found during compression\n", filters[i]);
       return NULL;
 
-      udfiltersuccess:;
+      urfiltersuccess:;
 
     }
 
@@ -1057,7 +1045,6 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
       cbytes = blosclz_compress(context->clevel, _src + j * neblock,
                                 (int)neblock, dest, (int)maxout);
     }
-  #if defined(HAVE_LZ4)
     else if (context->compcode == BLOSC_LZ4) {
       void *hash_table = NULL;
     #ifdef HAVE_IPP
@@ -1070,7 +1057,6 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
       cbytes = lz4hc_wrap_compress((char*)_src + j * neblock, (size_t)neblock,
                                    (char*)dest, (size_t)maxout, context->clevel);
     }
-  #endif /* HAVE_LZ4 */
   #if defined(HAVE_ZLIB)
     else if (context->compcode == BLOSC_ZLIB) {
       cbytes = zlib_wrap_compress((char*)_src + j * neblock, (size_t)neblock,
@@ -1084,7 +1070,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
                                   (char*)dest, (size_t)maxout, context->clevel);
     }
   #endif /* HAVE_ZSTD */
-    else if (context->compcode >= BLOSC2_BDEFINED_CODECS) {
+    else if (context->compcode > BLOSC2_DEFINED_CODECS_STOP) {
       for (int i = 0; i < g_ncodecs; ++i) {
         if (g_codecs[i].compcode == context->compcode) {
           blosc2_cparams cparams;
@@ -1095,12 +1081,12 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
                                         maxout,
                                         context->compcode_meta,
                                         &cparams);
-          goto udcodecsuccess;
+          goto urcodecsuccess;
         }
       }
       BLOSC_TRACE_ERROR("User-defined compressor codec %d not found during compression", context->compcode);
       return BLOSC2_ERROR_CODEC_SUPPORT;
-    udcodecsuccess:
+    urcodecsuccess:
       ;
     } else {
       blosc_compcode_to_compname(context->compcode, &compname);
@@ -1148,7 +1134,7 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
   int32_t typesize = context->typesize;
   uint8_t* filters = context->filters;
   uint8_t* filters_meta = context->filters_meta;
-  blosc2_filter * udfilters = context->udfilters;
+  blosc2_filter * urfilters = context->urfilters;
   uint8_t* _src = src;
   uint8_t* _dest = tmp;
   uint8_t* _tmp = tmp2;
@@ -1161,7 +1147,7 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
       _dest = dest + offset;
     }
     int rc = BLOSC2_ERROR_SUCCESS;
-    if (filters[i] < BLOSC2_BDEFINED_FILTERS) {
+    if (filters[i] <= BLOSC2_DEFINED_FILTERS_STOP) {
       switch (filters[i]) {
         case BLOSC_SHUFFLE:
           for (int j = 0; j <= filters_meta[i]; j++) {
@@ -1232,12 +1218,12 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
               BLOSC_TRACE_ERROR("User-defined filter %d failed during decompression.", filters[i]);
               return rc;
             }
-            goto udfiltersuccess;
+            goto urfiltersuccess;
           }
         }
       BLOSC_TRACE_ERROR("User-defined filter %d not found during decompression.", filters[i]);
       return BLOSC2_ERROR_FILTER_PIPELINE;
-      udfiltersuccess:;
+      urfiltersuccess:;
     }
 
     // Cycle buffers when required
@@ -1628,12 +1614,10 @@ static int blosc_d(
       if (compformat == BLOSC_BLOSCLZ_FORMAT) {
         nbytes = blosclz_decompress(src, cbytes, _dest, (int)neblock);
       }
-  #if defined(HAVE_LZ4)
       else if (compformat == BLOSC_LZ4_FORMAT) {
         nbytes = lz4_wrap_decompress((char*)src, (size_t)cbytes,
                                      (char*)_dest, (size_t)neblock);
       }
-  #endif /*  HAVE_LZ4 */
   #if defined(HAVE_ZLIB)
       else if (compformat == BLOSC_ZLIB_FORMAT) {
         nbytes = zlib_wrap_decompress((char*)src, (size_t)cbytes,
@@ -1658,12 +1642,12 @@ static int blosc_d(
                                           neblock,
                                           context->compcode_meta,
                                           &dparams);
-            goto udcodecsuccess;
+            goto urcodecsuccess;
           }
         }
         BLOSC_TRACE_ERROR("User-defined compressor codec %d not found during decompression", context->compcode);
         return BLOSC2_ERROR_CODEC_SUPPORT;
-      udcodecsuccess:
+      urcodecsuccess:
         ;
       }
       else {
@@ -3196,12 +3180,10 @@ const char* blosc_list_compressors(void) {
   if (compressors_list_done) return ret;
   ret[0] = '\0';
   strcat(ret, BLOSC_BLOSCLZ_COMPNAME);
-#if defined(HAVE_LZ4)
   strcat(ret, ",");
   strcat(ret, BLOSC_LZ4_COMPNAME);
   strcat(ret, ",");
   strcat(ret, BLOSC_LZ4HC_COMPNAME);
-#endif /* HAVE_LZ4 */
 #if defined(HAVE_ZLIB)
   strcat(ret, ",");
   strcat(ret, BLOSC_ZLIB_COMPNAME);
@@ -3224,11 +3206,7 @@ int blosc_get_complib_info(const char* compname, char** complib, char** version)
   int clibcode;
   const char* clibname;
   const char* clibversion = "unknown";
-
-#if (defined(HAVE_LZ4) && defined(LZ4_VERSION_MAJOR)) || \
-    (defined(HAVE_ZSTD) && defined(ZSTD_VERSION_MAJOR))
   char sbuffer[256];
-#endif
 
   clibcode = compname_to_clibcode(compname);
   clibname = clibcode_to_clibname(clibcode);
@@ -3237,15 +3215,11 @@ int blosc_get_complib_info(const char* compname, char** complib, char** version)
   if (clibcode == BLOSC_BLOSCLZ_LIB) {
     clibversion = BLOSCLZ_VERSION_STRING;
   }
-#if defined(HAVE_LZ4)
   else if (clibcode == BLOSC_LZ4_LIB) {
-#if defined(LZ4_VERSION_MAJOR)
     sprintf(sbuffer, "%d.%d.%d",
             LZ4_VERSION_MAJOR, LZ4_VERSION_MINOR, LZ4_VERSION_RELEASE);
     clibversion = sbuffer;
-#endif /* LZ4_VERSION_MAJOR */
   }
-#endif /* HAVE_LZ4 */
 #if defined(HAVE_ZLIB)
   else if (clibcode == BLOSC_ZLIB_LIB) {
     clibversion = ZLIB_VERSION;
@@ -3398,6 +3372,15 @@ void blosc_init(void) {
   /* Return if Blosc is already initialized */
   if (g_initlib) return;
 
+  g_ncodecs = 0;
+  g_nfilters = 0;
+
+#if defined(HAVE_PLUGINS)
+  #include "blosc2/blosc2-common.h"
+  #include "blosc2/blosc2-stdio.h"
+  register_codecs();
+  register_filters();
+#endif
   pthread_mutex_init(&global_comp_mutex, NULL);
   /* Create a global context */
   g_global_context = (blosc2_context*)my_malloc(sizeof(blosc2_context));
@@ -3506,13 +3489,13 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
     context->filters[i] = cparams.filters[i];
     context->filters_meta[i] = cparams.filters_meta[i];
 
-    if (context->filters[i] >= BLOSC_LAST_FILTER && context->filters[i] < BLOSC2_BDEFINED_FILTERS) {
+    if (context->filters[i] >= BLOSC_LAST_FILTER && context->filters[i] <= BLOSC2_DEFINED_FILTERS_STOP) {
       BLOSC_TRACE_ERROR("filter (%d) is not yet defined",
                         context->filters[i]);
       free(context);
       return NULL;
     }
-    if (context->filters[i] >= BLOSC_LAST_REGISTERED_FILTER && context->filters[i] < BLOSC2_REGISTERED_FILTERS) {
+    if (context->filters[i] > BLOSC_LAST_REGISTERED_FILTER && context->filters[i] <= BLOSC2_GLOBAL_REGISTERED_FILTERS_STOP) {
       BLOSC_TRACE_ERROR("filter (%d) is not yet defined",
                         context->filters[i]);
       free(context);
@@ -3827,58 +3810,87 @@ int blosc2_chunk_repeatval(blosc2_cparams cparams, const size_t nbytes,
 
 /* Register functions */
 
+int register_filter_private(blosc2_filter *filter) {
+    BLOSC_ERROR_NULL(filter, BLOSC2_ERROR_INVALID_PARAM);
+    if (g_nfilters == UINT8_MAX) {
+        BLOSC_TRACE_ERROR("Can not register more filters");
+        return BLOSC2_ERROR_CODEC_SUPPORT;
+    }
+    if (filter->id < BLOSC2_GLOBAL_REGISTERED_FILTERS_START) {
+        BLOSC_TRACE_ERROR("The id must be greater or equal than %d", BLOSC2_GLOBAL_REGISTERED_FILTERS_START);
+        return BLOSC2_ERROR_FAILURE;
+    }
+    if (filter->id > BLOSC2_USER_REGISTERED_FILTERS_STOP) {
+        BLOSC_TRACE_ERROR("The id must be leather or equal than %d", BLOSC2_USER_REGISTERED_FILTERS_STOP);
+        return BLOSC2_ERROR_FAILURE;
+    }
+
+    // Check if the filter is already registered
+    for (int i = 0; i < g_nfilters; ++i) {
+        if (g_filters[i].id == filter->id) {
+            BLOSC_TRACE_ERROR("The filter is already registered!");
+            return BLOSC2_ERROR_FAILURE;
+        }
+    }
+
+    blosc2_filter *filter_new = &g_filters[g_nfilters++];
+    memcpy(filter_new, filter, sizeof(blosc2_filter));
+
+    return BLOSC2_ERROR_SUCCESS;
+}
+
+
 int blosc2_register_filter(blosc2_filter *filter) {
-  BLOSC_ERROR_NULL(filter, BLOSC2_ERROR_INVALID_PARAM);
-  if (g_nfilters == UINT8_MAX) {
-    BLOSC_TRACE_ERROR("Can not register more filters");
-    return BLOSC2_ERROR_CODEC_SUPPORT;
-  }
-  if (filter->id < BLOSC2_REGISTERED_FILTERS) {
-    BLOSC_TRACE_ERROR("The id must be greater or equal than %d", BLOSC2_REGISTERED_FILTERS);
+  if (filter->id < BLOSC2_USER_REGISTERED_FILTERS_START) {
+    BLOSC_TRACE_ERROR("The id must be greater or equal than %d", BLOSC2_USER_REGISTERED_FILTERS_START);
     return BLOSC2_ERROR_FAILURE;
   }
 
-  // Check if the filter is already registered
-  for (int i = 0; i < g_nfilters; ++i) {
-    if (g_filters[i].id == filter->id) {
-      BLOSC_TRACE_ERROR("The filter is already registered!");
-      return BLOSC2_ERROR_FAILURE;
-    }
-  }
-
-  blosc2_filter *filter_new = &g_filters[g_nfilters++];
-  memcpy(filter_new, filter, sizeof(blosc2_filter));
-
-  return BLOSC2_ERROR_SUCCESS;
+  return register_filter_private(filter);
 }
 
 
 /* Register functions */
 
+int register_codec_private(blosc2_codec *codec) {
+    BLOSC_ERROR_NULL(codec, BLOSC2_ERROR_INVALID_PARAM);
+    if (g_ncodecs == UINT8_MAX) {
+        BLOSC_TRACE_ERROR("Can not register more codecs");
+        return BLOSC2_ERROR_CODEC_SUPPORT;
+    }
+    if (codec->compcode < BLOSC2_GLOBAL_REGISTERED_CODECS_START) {
+        BLOSC_TRACE_ERROR("The id must be greater or equal than %d", BLOSC2_GLOBAL_REGISTERED_CODECS_START);
+        return BLOSC2_ERROR_FAILURE;
+    }
+    if (codec->compcode > BLOSC2_USER_REGISTERED_CODECS_STOP) {
+        BLOSC_TRACE_ERROR("The id must be leather or equal than %d", BLOSC2_USER_REGISTERED_CODECS_STOP);
+        return BLOSC2_ERROR_FAILURE;
+    }
+
+    // Check if the code is already registered
+    for (int i = 0; i < g_ncodecs; ++i) {
+        if (g_codecs[i].compcode == codec->compcode) {
+            BLOSC_TRACE_ERROR("The codec is already registered!");
+            return BLOSC2_ERROR_CODEC_PARAM;
+        }
+    }
+
+    blosc2_codec *codec_new = &g_codecs[g_ncodecs++];
+    memcpy(codec_new, codec, sizeof(blosc2_codec));
+
+    return BLOSC2_ERROR_SUCCESS;
+}
+
+
 int blosc2_register_codec(blosc2_codec *codec) {
-  BLOSC_ERROR_NULL(codec, BLOSC2_ERROR_INVALID_PARAM);
-  if (g_ncodecs == UINT8_MAX) {
-    BLOSC_TRACE_ERROR("Can not register more codecs");
-    return BLOSC2_ERROR_CODEC_SUPPORT;
-  }
-  if (codec->compcode < BLOSC2_REGISTERED_CODECS) {
-    BLOSC_TRACE_ERROR("The compcode must be greater or equal than %d", BLOSC2_REGISTERED_CODECS);
+  if (codec->compcode < BLOSC2_USER_REGISTERED_CODECS_START) {
+    BLOSC_TRACE_ERROR("The compcode must be greater or equal than %d", BLOSC2_USER_REGISTERED_CODECS_START);
     return BLOSC2_ERROR_CODEC_PARAM;
   }
 
-  // Check if the code is already registered
-  for (int i = 0; i < g_ncodecs; ++i) {
-    if (g_codecs[i].compcode == codec->compcode) {
-      BLOSC_TRACE_ERROR("The codec is already registered!");
-      return BLOSC2_ERROR_CODEC_PARAM;
-    }
-  }
-
-  blosc2_codec *codec_new = &g_codecs[g_ncodecs++];
-  memcpy(codec_new, codec, sizeof(blosc2_codec));
-
-  return BLOSC2_ERROR_SUCCESS;
+  return register_codec_private(codec);
 }
+
 
 int _blosc2_register_io_cb(const blosc2_io_cb *io) {
 

@@ -12,6 +12,11 @@ jobs:
             os: ubuntu-latest
             compiler: gcc
 
+          - name: Ubuntu GCC No Plugins
+            os: ubuntu-latest
+            compiler: gcc
+            cmake-args: -DBUILD_PLUGINS=OFF
+
           # Out of source build
           - name: Ubuntu GCC OSB
             os: ubuntu-latest
@@ -48,11 +53,6 @@ jobs:
             os: ubuntu-latest
             compiler: clang
             cmake-args: -DDEACTIVATE_AVX2=ON
-
-          - name: Ubuntu Clang No LZ4
-            os: ubuntu-latest
-            compiler: clang
-            cmake-args: -DDEACTIVATE_LZ4=ON
 
           - name: Ubuntu Clang No ZLIB
             os: ubuntu-latest

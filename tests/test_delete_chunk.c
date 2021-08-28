@@ -66,8 +66,8 @@ static char* test_delete_chunk(void) {
     }
   }
 
-  static int32_t data[CHUNKSIZE];
-  static int32_t data_dest[CHUNKSIZE];
+  int32_t *data = malloc(CHUNKSIZE * sizeof(int32_t));
+  int32_t *data_dest = malloc(CHUNKSIZE * sizeof(int32_t));
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
   int dsize;
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -94,7 +94,15 @@ static char* test_delete_chunk(void) {
     mu_assert("ERROR: bad append", nchunks_ > 0);
   }
 
-  for (int i = 0; i < tdata.ndeletes; ++i) {
+  if (tdata.nchunks >= 2) {
+    // Check that no file is removed if a special value chunk is deleted in a sframe
+    int _nchunks = blosc2_schunk_delete_chunk(schunk, 1);
+    mu_assert("ERROR: chunk 1 cannot be deleted correctly", _nchunks >= 0);
+    _nchunks = blosc2_schunk_delete_chunk(schunk, 0);
+    mu_assert("ERROR: chunk 0 cannot be deleted correctly", _nchunks >= 0);
+  }
+
+  for (int i = 0; i < tdata.ndeletes - 2; ++i) {
     // Delete in a random position
     int pos = rand() % (schunk->nchunks);
     int32_t nchunks_old = schunk->nchunks;
@@ -140,6 +148,9 @@ static char* test_delete_chunk(void) {
   blosc2_schunk_free(schunk);
   /* Destroy the Blosc environment */
   blosc_destroy();
+
+  free(data);
+  free(data_dest);
 
   return EXIT_SUCCESS;
 }
