@@ -284,8 +284,8 @@ if(BLOSC_INSTALL)
             DESTINATION include/blosc2 COMPONENT DEV)
     if(BUILD_PLUGINS)
         install(FILES
-                ../plugins/filters/filters-registry.h
-                ../plugins/codecs/codecs-registry.h
+                ../include/blosc2/filters-registry.h
+                ../include/blosc2/codecs-registry.h
                 DESTINATION include/blosc2 COMPONENT DEV)
     endif()
 
