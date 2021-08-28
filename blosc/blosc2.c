@@ -1043,7 +1043,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
     }
     else if (context->compcode == BLOSC_BLOSCLZ) {
       cbytes = blosclz_compress(context->clevel, _src + j * neblock,
-                                (int)neblock, dest, (int)maxout);
+                                (int)neblock, dest, (int)maxout, context);
     }
     else if (context->compcode == BLOSC_LZ4) {
       void *hash_table = NULL;
@@ -1361,7 +1361,7 @@ static int blosc_d(
   uint8_t* filters = context->filters;
   uint8_t *tmp3 = thread_context->tmp4;
   int32_t compformat = (context->header_flags & (uint8_t)0xe0) >> 5u;
-  int dont_split = (context->header_flags & (uint8_t)0x10) >> 4u;
+  int dont_split = (context->header_flags & 0x10) >> 4;
   int32_t chunk_nbytes;
   int32_t chunk_cbytes;
   int nstreams;

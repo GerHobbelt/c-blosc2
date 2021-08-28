@@ -129,6 +129,7 @@ endif()
 if(UNIX AND NOT APPLE)
     set(LIBS ${LIBS} "rt")
     set(LIBS ${LIBS} "m")
+    # set(LIBS ${LIBS} "profiler")
 endif()
 
 if (BUILD_PLUGINS)
@@ -233,7 +234,6 @@ if(COMPILER_SUPPORT_ALTIVEC)
             SOURCE shuffle.c
             APPEND PROPERTY COMPILE_DEFINITIONS SHUFFLE_ALTIVEC_ENABLED)
 endif()
-
 
 # When the option has been selected to compile the test suite,
 # compile an additional version of blosc2_static which exports
