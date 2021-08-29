@@ -10,7 +10,11 @@
 
 /* Test for using blosc without blosc_init() and blosc_destroy() */
 
+#include "config.h"
+
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <assert.h>
 #include "test_common.h"
 

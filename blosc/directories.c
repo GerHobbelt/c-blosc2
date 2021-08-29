@@ -17,6 +17,9 @@
   #include <malloc.h>
   #include <io.h>
 
+#define rmdir _rmdir
+#define unlink _unlink
+
   int blosc2_remove_dir(const char* dir_path) {
     char last_char = dir_path[strlen(dir_path) - 1];
     char* path;
@@ -64,6 +67,7 @@
   }
 
 #else
+
   #include <dirent.h>
   #include <unistd.h>
 

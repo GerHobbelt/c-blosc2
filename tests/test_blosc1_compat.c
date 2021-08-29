@@ -15,15 +15,15 @@
 #define BUFFER_ALIGN_SIZE 32
 #define NTHREADS 1
 
-int tests_run = 0;
+static int tests_run = 0;
 
 /* Global vars */
-void *src, *srccpy, *dest, *dest2;
-int nbytes, cbytes;
-int clevel = 1;
-int doshuffle = 1;
-size_t typesize = sizeof(int32_t);
-size_t size = sizeof(int32_t) * 1000 * 1000;
+static void *src = NULL, *srccpy = NULL, *dest = NULL, *dest2 = NULL;
+static int nbytes, cbytes;
+static int clevel = 1;
+static int doshuffle = 1;
+static size_t typesize = sizeof(int32_t);
+static size_t size = sizeof(int32_t) * 1000 * 1000;
 
 
 /* Check compressing + decompressing */
@@ -94,7 +94,7 @@ static char *test_compress_getitem(void) {
   mu_assert("ERROR: nbytes incorrect(1)", nbytes == 10 * typesize);
 
   // Check roundtrip
-  int exit_code = memcmp(srccpy + typesize, dest2, 10 * typesize) ? EXIT_FAILURE : EXIT_SUCCESS;
+  int exit_code = memcmp((uint8_t *)srccpy + typesize, dest2, 10 * typesize) ? EXIT_FAILURE : EXIT_SUCCESS;
   mu_assert("ERROR: Bad roundtrip!", exit_code == EXIT_SUCCESS);
 
   return 0;

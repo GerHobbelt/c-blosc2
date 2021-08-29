@@ -34,7 +34,7 @@
 #endif  /* _WIN32 */
 
 /* If C11 is supported, use it's built-in aligned allocation. */
-#if __STDC_VERSION__ >= 201112L
+#if (__STDC_VERSION__ >= 201112L) && !defined(_MSC_VER)
 #include <stdalign.h>
 #endif
 

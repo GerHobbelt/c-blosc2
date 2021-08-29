@@ -224,7 +224,7 @@ static char* test_frame(void) {
   cbytes = schunk->cbytes;
   if (nchunks > 0) {
     if (nbytes < 10 * cbytes)
-        printf("%ld -> %ld\n", nbytes, cbytes);
+        printf("%ld -> %ld\n", (long)nbytes, (long)cbytes);
     mu_assert("ERROR: bad compression ratio in frame", nbytes > 10 * cbytes);
   }
 

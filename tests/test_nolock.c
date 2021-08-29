@@ -10,7 +10,11 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
+#include "config.h"
+
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <assert.h>
 #include "test_common.h"
 
