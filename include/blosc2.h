@@ -47,8 +47,8 @@ extern "C" {
 #define BLOSC_VERSION_MINOR    0    /* for minor interface/format changes  */
 #define BLOSC_VERSION_RELEASE  3    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC_VERSION_STRING   "2.0.3.dev"  /* string version.  Sync with above! */
-#define BLOSC_VERSION_DATE     "$Date:: 2021-07-10 #$"    /* date version */
+#define BLOSC_VERSION_STRING   "2.0.3"  /* string version.  Sync with above! */
+#define BLOSC_VERSION_DATE     "$Date:: 2021-08-31 #$"    /* date version */
 
 
 /* Tracing macros */
@@ -66,15 +66,17 @@ extern "C" {
 enum {
   /* Blosc format version, starting at 1
      1 -> Blosc pre-1.0
-     2 -> Blosc 1.x series
+     2 -> Blosc 1.x stable series
      3 -> Blosc 2-alpha.x series
      4 -> Blosc 2.x beta.1 series
+     5 -> Blosc 2.x stable series
      */
   BLOSC_VERSION_FORMAT_PRE1 = 1,
   BLOSC1_VERSION_FORMAT = 2,
   BLOSC2_VERSION_FORMAT_ALPHA = 3,
   BLOSC2_VERSION_FORMAT_BETA1 = 4,
-  BLOSC_VERSION_FORMAT = BLOSC2_VERSION_FORMAT_BETA1,
+  BLOSC2_VERSION_FORMAT_STABLE = 5,
+  BLOSC_VERSION_FORMAT = BLOSC2_VERSION_FORMAT_STABLE,
 };
 
 
