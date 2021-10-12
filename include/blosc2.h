@@ -45,9 +45,9 @@ extern "C" {
 /* Version numbers */
 #define BLOSC_VERSION_MAJOR    2    /* for major interface/format changes  */
 #define BLOSC_VERSION_MINOR    0    /* for minor interface/format changes  */
-#define BLOSC_VERSION_RELEASE  4    /* for tweaks, bug-fixes, or development */
+#define BLOSC_VERSION_RELEASE  5    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC_VERSION_STRING   "2.0.4"  /* string version.  Sync with above! */
+#define BLOSC_VERSION_STRING   "2.0.5.dev"  /* string version.  Sync with above! */
 #define BLOSC_VERSION_DATE     "$Date:: 2021-10-02 #$"    /* date version */
 
 
@@ -2020,17 +2020,17 @@ BLOSC_EXPORT int blosc2_register_filter(blosc2_filter *filter);
 *********************************************************************/
 
 /*
- * Remove a directory and its files.
+ * @brief Remove a directory and its files.
  */
 BLOSC_EXPORT int blosc2_remove_dir(const char *path);
 
 /*
- * Remove a file or a directory given by path.
+ * @brief Remove a file or a directory given by path.
  */
 BLOSC_EXPORT int blosc2_remove_urlpath(const char *path);
 
 /*
- * Rename a file or a directory given by old_urlpath to new_path.
+ * @brief Rename a file or a directory given by old_urlpath to new_path.
  */
 BLOSC_EXPORT int blosc2_rename_urlpath(char* old_urlpath, char* new_path);
 
