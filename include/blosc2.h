@@ -47,8 +47,8 @@ extern "C" {
 #define BLOSC_VERSION_MINOR    0    /* for minor interface/format changes  */
 #define BLOSC_VERSION_RELEASE  4    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC_VERSION_STRING   "2.0.4.dev"  /* string version.  Sync with above! */
-#define BLOSC_VERSION_DATE     "$Date:: 2021-08-31 #$"    /* date version */
+#define BLOSC_VERSION_STRING   "2.0.4"  /* string version.  Sync with above! */
+#define BLOSC_VERSION_DATE     "$Date:: 2021-10-02 #$"    /* date version */
 
 
 /* Tracing macros */
@@ -229,11 +229,7 @@ enum {
  */
 #define BLOSC_BLOSCLZ_LIBNAME   "BloscLZ"
 #define BLOSC_LZ4_LIBNAME       "LZ4"
-#if defined(HAVE_ZIB_NG)
-  #define BLOSC_ZLIB_LIBNAME    "Zlib (via zlib-ng)"
-#else
-  #define BLOSC_ZLIB_LIBNAME    "Zlib"
-#endif	/* HAVE_ZLIB_NG */
+#define BLOSC_ZLIB_LIBNAME      "Zlib"
 #define BLOSC_ZSTD_LIBNAME      "Zstd"
 
 /**
@@ -2032,6 +2028,11 @@ BLOSC_EXPORT int blosc2_remove_dir(const char *path);
  * Remove a file or a directory given by path.
  */
 BLOSC_EXPORT int blosc2_remove_urlpath(const char *path);
+
+/*
+ * Rename a file or a directory given by old_urlpath to new_path.
+ */
+BLOSC_EXPORT int blosc2_rename_urlpath(char* old_urlpath, char* new_path);
 
 #ifdef __cplusplus
 }
