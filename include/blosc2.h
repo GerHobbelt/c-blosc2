@@ -103,7 +103,7 @@ enum {
   //!< implementations.
   BLOSC_MAX_BUFFERSIZE = (INT_MAX - BLOSC_MAX_OVERHEAD),
   //!< Maximum source buffer size to be compressed
-  BLOSC_MAX_TYPESIZE = 255,
+  BLOSC_MAX_TYPESIZE = UINT8_MAX,
   //!< Maximum typesize before considering source buffer as a stream of bytes.
   //!< Cannot be larger than 255.
   BLOSC_MIN_BUFFERSIZE = 128,
@@ -403,7 +403,7 @@ BLOSC_EXPORT void blosc_destroy(void);
  * @parblock
  *
  * This function honors different environment variables to control
- * internal parameters without the need of doing that programatically.
+ * internal parameters without the need of doing that programmatically.
  * Here are the ones supported:
  *
  * * **BLOSC_CLEVEL=(INTEGER)**: This will overwrite the @p clevel parameter
@@ -474,7 +474,7 @@ BLOSC_EXPORT int blosc_compress(int clevel, int doshuffle, size_t typesize,
  * @par Environment variables
  * @parblock
  * This function honors different environment variables to control
- * internal parameters without the need of doing that programatically.
+ * internal parameters without the need of doing that programmatically.
  * Here are the ones supported:
  *
  * * **BLOSC_NTHREADS=(INTEGER)**: This will call
@@ -802,7 +802,7 @@ typedef int     (*blosc2_truncate_cb)(void *stream, int64_t size);
 
 
 /*
- * Input/Ouput callbacks.
+ * Input/Output callbacks.
  */
 typedef struct {
   uint8_t id;
@@ -1111,7 +1111,7 @@ BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblo
  * _____________________
  *
  * *blosc_compress()* honors different environment variables to control
- * internal parameters without the need of doing that programatically.
+ * internal parameters without the need of doing that programmatically.
  * Here are the ones supported:
  *
  * **BLOSC_CLEVEL=(INTEGER)**: This will overwrite the @p clevel parameter
@@ -1182,7 +1182,7 @@ BLOSC_EXPORT int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
  * _____________________
  *
  * *blosc_decompress* honors different environment variables to control
- * internal parameters without the need of doing that programatically.
+ * internal parameters without the need of doing that programmatically.
  * Here are the ones supported:
  *
  * **BLOSC_NTHREADS=(INTEGER)**: This will call
@@ -1441,7 +1441,7 @@ typedef struct blosc2_schunk {
   //!< Context for decompression.
   struct blosc2_metalayer *metalayers[BLOSC2_MAX_METALAYERS];
   //!< The array of metalayers.
-  int16_t nmetalayers;
+  uint16_t nmetalayers;
   //!< The number of metalayers in the super-chunk
   struct blosc2_metalayer *vlmetalayers[BLOSC2_MAX_VLMETALAYERS];
   //<! The array of variable-length metalayers.
@@ -1718,7 +1718,7 @@ BLOSC_EXPORT int blosc2_schunk_get_dparams(blosc2_schunk *schunk, blosc2_dparams
  * @param schunk The super-chunk whose chunk offsets are to be reordered.
  * @param offsets_order The new order of the chunk offsets.
  *
- * @return 0 if suceeds. Else a negative code is returned.
+ * @return 0 if succeeds. Else a negative code is returned.
  */
 BLOSC_EXPORT int blosc2_schunk_reorder_offsets(blosc2_schunk *schunk, int *offsets_order);
 
@@ -1773,7 +1773,7 @@ BLOSC_EXPORT int blosc2_meta_exists(blosc2_schunk *schunk, const char *name);
  * @return If successful, the index of the new metalayer. Else, return a negative value.
  */
 BLOSC_EXPORT int blosc2_meta_add(blosc2_schunk *schunk, const char *name, uint8_t *content,
-                                 uint32_t content_len);
+                                 int32_t content_len);
 
 /**
  * @brief Update the content of an existing metalayer.
@@ -1789,7 +1789,7 @@ BLOSC_EXPORT int blosc2_meta_add(blosc2_schunk *schunk, const char *name, uint8_
  * @return If successful, the index of the metalayer. Else, return a negative value.
  */
 BLOSC_EXPORT int blosc2_meta_update(blosc2_schunk *schunk, const char *name, uint8_t *content,
-                                    uint32_t content_len);
+                                    int32_t content_len);
 
 /**
  * @brief Get the content out of a metalayer.
@@ -1805,7 +1805,7 @@ BLOSC_EXPORT int blosc2_meta_update(blosc2_schunk *schunk, const char *name, uin
  * @return If successful, the index of the new metalayer. Else, return a negative value.
  */
 BLOSC_EXPORT int blosc2_meta_get(blosc2_schunk *schunk, const char *name, uint8_t **content,
-                                 uint32_t *content_len);
+                                 int32_t *content_len);
 
 
 /*********************************************************************
@@ -1835,7 +1835,7 @@ BLOSC_EXPORT int blosc2_vlmeta_exists(blosc2_schunk *schunk, const char *name);
  * @return If successful, the index of the new variable-length metalayer. Else, return a negative value.
  */
 BLOSC_EXPORT int blosc2_vlmeta_add(blosc2_schunk *schunk, const char *name,
-                                   uint8_t *content, uint32_t content_len,
+                                   uint8_t *content, int32_t content_len,
                                    blosc2_cparams *cparams);
 
 /**
@@ -1851,7 +1851,7 @@ BLOSC_EXPORT int blosc2_vlmeta_add(blosc2_schunk *schunk, const char *name,
  * @return If successful, the index of the variable-length metalayer. Else, return a negative value.
  */
 BLOSC_EXPORT int blosc2_vlmeta_update(blosc2_schunk *schunk, const char *name,
-                                      uint8_t *content, uint32_t content_len,
+                                      uint8_t *content, int32_t content_len,
                                       blosc2_cparams *cparams);
 
 /**
@@ -1868,7 +1868,7 @@ BLOSC_EXPORT int blosc2_vlmeta_update(blosc2_schunk *schunk, const char *name,
  * @return If successful, the index of the new variable-length metalayer. Else, return a negative value.
  */
 BLOSC_EXPORT int blosc2_vlmeta_get(blosc2_schunk *schunk, const char *name,
-                                   uint8_t **content, uint32_t *content_len);
+                                   uint8_t **content, int32_t *content_len);
 
 /**
  * @brief Delete the variable-length metalayer from the super-chunk.

@@ -190,7 +190,7 @@ using the msgpack format. Here it is the format for the *metalayers*::
     (``uint8``) Compression codec metadata associated with the compression codec. Only used in user-defined codecs.
 
 :map of metalayers:
-    This is a *msgpack-formattted* map for the different metalayers.  The keys will be a string (0xa0 + namelen) for
+    This is a *msgpack-formatted* map for the different metalayers.  The keys will be a string (0xa0 + namelen) for
     the names of the metalayers, followed by an int32 (0xd2) for the *offset* of the value of this metalayer.  The
     actual value will be encoded as a bin32 (0xc6) value later in header.
 
@@ -206,9 +206,10 @@ The chunks section is composed of one or more Blosc data chunks followed by an i
 Each chunk is stored contiguously one after the other, and each follows the format described in the
 `chunk format <README_CHUNK_FORMAT.rst>`_ document.
 
-The `chunk idx` is a Blosc2 chunk containing the indexes to each chunk in this section.  The data in the
-chunk is a list of (32-bit, 64-bit or more, see above) offsets to each chunk. The index chunk follows
-the regular Blosc2 chunk format and can be compressed.
+The `chunk idx` is a Blosc2 chunk containing the offsets (starting from the beginning of the header)
+to each chunk in this section.  The data in the chunk is a list of offsets (they can be 32-bit, 64-bit
+or more, see above; currently only 64-bit are implemented) to each chunk.  The index chunk follows the
+regular Blosc2 chunk format and can be compressed (the default).
 
 **Note:** The offsets can take *special values* so as to represent chunks with run-length (equal) values.
 The codification for the offsets is as follows::

@@ -66,7 +66,7 @@ int ndlz8_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
   int32_t* chunkshape = malloc(8 * sizeof(int32_t));
   int32_t* blockshape = malloc(8 * sizeof(int32_t));
   uint8_t* smeta;
-  uint32_t smeta_len;
+  int32_t smeta_len;
   if (blosc2_meta_get(cparams->schunk, "caterva", &smeta, &smeta_len) < 0) {
     printf("Blosc error");
     return 0;
@@ -145,7 +145,7 @@ int ndlz8_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
   uint32_t ii[2];
   for (ii[0] = 0; ii[0] < i_stop[0]; ++ii[0]) {
     for (ii[1] = 0; ii[1] < i_stop[1]; ++ii[1]) {      // for each cell
-      for (int h = 0; h < 7; h++){          // new cell -> new possible refereces
+      for (int h = 0; h < 7; h++) {         // new cell -> new possible references
         update_pair[h] = 0;
         if (h != 6) {
           update_triple[h] = 0;

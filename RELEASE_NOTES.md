@@ -38,7 +38,7 @@ Changes from 2.0.1 to 2.0.2
 
 * Fixed blosc2_stdio_open never returns NULL if it cannot open file.
 
-* Standarized places for headers in blosc/ and include/ dirs.
+* Standardized places for headers in blosc/ and include/ dirs.
 
 * `nthreads` is int16_t everywhere in the API. Fixes #331.
 
@@ -293,9 +293,9 @@ Changes from 2.0.0a4 to 2.0.0a5
 - Preliminary support for Neon instruction set in ARM CPUs.  Shuffle seems
   to work well, but still some issues with bitshuffle.
 
-- Internal LZ4 sources bumbed to 1.8.2.
+- Internal LZ4 sources bumped to 1.8.2.
 
-- Internal Zstd sources bumbed to 1.3.4.
+- Internal Zstd sources bumped to 1.3.4.
 
 
 Changes from 2.0.0a3 to 2.0.0a4
