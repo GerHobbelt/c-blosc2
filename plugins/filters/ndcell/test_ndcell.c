@@ -67,6 +67,7 @@ static int test_ndcell(blosc2_schunk* schunk) {
 
     blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
     dparams.nthreads = 1;
+    dparams.typesize = schunk->typesize;
     dparams.schunk = schunk;
     blosc2_context *dctx;
     dctx = blosc2_create_dctx(dparams);
@@ -158,4 +159,5 @@ int main(void) {
     result = some_matches();
     printf("some_matches: %d obtained \n \n", result);
     blosc_destroy();
+    return BLOSC2_ERROR_SUCCESS;
 }

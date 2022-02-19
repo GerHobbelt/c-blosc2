@@ -7,6 +7,7 @@
 #include <blosc-private.h>
 #include "blosc2/codecs-registry.h"
 #include "ndlz/ndlz.h"
+#include "zfp/blosc2-zfp.h"
 
 void register_codecs() {
 
@@ -18,4 +19,22 @@ void register_codecs() {
     ndlz.decoder = ndlz_decompress;
     ndlz.compname = "ndlz";
     register_codec_private(&ndlz);
+
+    blosc2_codec zfp_acc;
+    zfp_acc.compcode = BLOSC_CODEC_ZFP_FIXED_ACCURACY;
+    zfp_acc.compver = 1;
+    zfp_acc.complib = BLOSC_CODEC_ZFP_FIXED_ACCURACY;
+    zfp_acc.encoder = blosc2_zfp_acc_compress;
+    zfp_acc.decoder = blosc2_zfp_acc_decompress;
+    zfp_acc.compname = "zfp_acc";
+    register_codec_private(&zfp_acc);
+
+    blosc2_codec zfp_rate;
+    zfp_rate.compcode = BLOSC_CODEC_ZFP_FIXED_RATE;
+    zfp_rate.compver = 1;
+    zfp_rate.complib = BLOSC_CODEC_ZFP_FIXED_RATE;
+    zfp_rate.encoder = blosc2_zfp_rate_compress;
+    zfp_rate.decoder = blosc2_zfp_rate_decompress;
+    zfp_rate.compname = "zfp_rate";
+    register_codec_private(&zfp_rate);
 }

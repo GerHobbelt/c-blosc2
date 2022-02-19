@@ -1,9 +1,11 @@
 # sources
-set(SOURCES ${SOURCES} ndlz.c ndlz.h ndlz-private.h ndlz4x4.c ndlz4x4.h ndlz8x8.c ndlz8x8.h xxhash.c xxhash.h)
+set(SOURCES ${SOURCES} ../plugins/codecs/ndlz/ndlz.c ../plugins/codecs/ndlz/ndlz.h ../plugins/codecs/ndlz/ndlz-private.h
+    ../plugins/codecs/ndlz/ndlz4x4.c ../plugins/codecs/ndlz/ndlz4x4.h ../plugins/codecs/ndlz/ndlz8x8.c
+    ../plugins/codecs/ndlz/ndlz8x8.h ../plugins/codecs/ndlz/xxhash.c ../plugins/codecs/ndlz/xxhash.h PARENT_SCOPE)
 
 # targets
 if(BUILD_TESTS)
-    add_executable(test_ndlz test_ndlz.c ${SOURCES})
+    add_executable(test_ndlz test_ndlz.c)
     # Define the BLOSC_TESTING symbol so normally-hidden functions
     # aren't hidden from the view of the test programs.
     set_property(

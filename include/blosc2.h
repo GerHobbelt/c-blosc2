@@ -985,6 +985,8 @@ static const blosc2_cparams BLOSC2_CPARAMS_DEFAULTS = {
   (zero) in the fields of the struct is passed to a function.
  */
 typedef struct {
+  int32_t typesize;
+  //!< The type size (8).
   int16_t nthreads;
   //!< The number of threads to use internally (1).
   void* schunk;
@@ -998,7 +1000,7 @@ typedef struct {
 /**
  * @brief Default struct for decompression params meant for user initialization.
  */
-static const blosc2_dparams BLOSC2_DPARAMS_DEFAULTS = {1, NULL, NULL, NULL};
+static const blosc2_dparams BLOSC2_DPARAMS_DEFAULTS = {8, 1, NULL, NULL, NULL};
 
 /**
  * @brief Create a context for @a *_ctx() compression functions.
@@ -1953,6 +1955,18 @@ BLOSC_EXPORT void blosc_set_blocksize(size_t blocksize);
  * available (the default).
  */
 BLOSC_EXPORT void blosc_set_schunk(blosc2_schunk* schunk);
+
+/**
+ * @brief Get the offsets of a frame in a super-chunk.
+ *
+ * @param schunk The super-chunk containing the frame.
+ *
+ * @return If successful, return a pointer to a buffer of the decompressed offsets.
+ * The number of offsets is equal to schunk->nchunks; the user is
+ * responsible to free this buffer. Else, return a NULL value.
+ */
+BLOSC_EXPORT int64_t* blosc2_frame_get_offsets(blosc2_schunk *schunk);
+
 
 /*********************************************************************
   Structures and functions related with compression codecs.
