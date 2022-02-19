@@ -25,9 +25,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "blosc2/blosc2-export.h"
 #include "blosc2/blosc2-common.h"
 #include "blosc2/blosc2-stdio.h"
+#ifdef __cplusplus
+}
+#endif
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include <windows.h>
@@ -985,8 +992,6 @@ static const blosc2_cparams BLOSC2_CPARAMS_DEFAULTS = {
   (zero) in the fields of the struct is passed to a function.
  */
 typedef struct {
-  int32_t typesize;
-  //!< The type size (8).
   int16_t nthreads;
   //!< The number of threads to use internally (1).
   void* schunk;
@@ -1000,7 +1005,7 @@ typedef struct {
 /**
  * @brief Default struct for decompression params meant for user initialization.
  */
-static const blosc2_dparams BLOSC2_DPARAMS_DEFAULTS = {8, 1, NULL, NULL, NULL};
+static const blosc2_dparams BLOSC2_DPARAMS_DEFAULTS = {1, NULL, NULL, NULL};
 
 /**
  * @brief Create a context for @a *_ctx() compression functions.
@@ -1972,8 +1977,8 @@ BLOSC_EXPORT int64_t* blosc2_frame_get_offsets(blosc2_schunk *schunk);
   Structures and functions related with compression codecs.
 *********************************************************************/
 
-typedef int (* blosc2_codec_encoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len, uint8_t meta, blosc2_cparams *cparams);
-typedef int (* blosc2_codec_decoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len, uint8_t meta, blosc2_dparams *dparams);
+typedef int (* blosc2_codec_encoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk);
+typedef int (* blosc2_codec_decoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk);
 
 typedef struct {
   uint8_t compcode;

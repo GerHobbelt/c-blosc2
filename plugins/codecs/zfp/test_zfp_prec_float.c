@@ -10,17 +10,18 @@
     Test program demonstrating use of the Blosc codec from C code.
     To compile this program:
 
-    $ gcc -O test_zfp_rate_float.c -o test_zfp_rate_float -lblosc2
+    $ gcc -O test_zfp_prec_float.c -o test_zfp_prec_float -lblosc2
 
 
 **********************************************************************/
 
 #include <stdio.h>
+#include <math.h>
 #include "blosc2.h"
 #include "blosc2/codecs-registry.h"
 #include <inttypes.h>
 
-static int test_zfp_rate_float(blosc2_schunk* schunk) {
+static int test_zfp_prec_float(blosc2_schunk* schunk) {
 
     if (schunk->typesize != 4) {
         printf("Error: This test is only for doubles.\n");
@@ -37,12 +38,12 @@ static int test_zfp_rate_float(blosc2_schunk* schunk) {
     float *data_dest = malloc(chunksize);
 
     /* Create a context for compression */
-    int8_t zfp_rate = 37;
+    int8_t zfp_prec = 25;
     blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
     cparams.splitmode = BLOSC_NEVER_SPLIT;
     cparams.typesize = schunk->typesize;
-    cparams.compcode = BLOSC_CODEC_ZFP_FIXED_RATE;
-    cparams.compcode_meta = zfp_rate;
+    cparams.compcode = BLOSC_CODEC_ZFP_FIXED_PRECISION;
+    cparams.compcode_meta = zfp_prec;
     cparams.filters[BLOSC2_MAX_FILTERS - 1] = BLOSC_NOFILTER;
     cparams.clevel = 5;
     cparams.nthreads = 1;
@@ -93,22 +94,21 @@ static int test_zfp_rate_float(blosc2_schunk* schunk) {
         for (int i = 0; i < (chunksize / cparams.typesize); i++) {
             printf("%f, ", data_dest[i]);
         }
-
-        double tolerance = 0.1;
+*/
+        double tolerance = 0.01;
         for (int i = 0; i < (chunksize / cparams.typesize); i++) {
             if ((data_in[i] == 0) || (data_dest[i] == 0)) {
                 if (fabsf(data_in[i] - data_dest[i]) > tolerance) {
-                    printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
+                    printf("i: %d, data %.8f, dest %.8f", i, data_in[i], data_dest[i]);
                     printf("\n Decompressed data differs from original!\n");
                     return -1;
                 }
             } else if (fabsf(data_in[i] - data_dest[i]) > tolerance * fmaxf(fabsf(data_in[i]), fabsf(data_dest[i]))) {
-                printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
+                printf("i: %d, data %.8f, dest %.8f", i, data_in[i], data_dest[i]);
                 printf("\n Decompressed data differs from original!\n");
                 return -1;
             }
         }
-    */
     }
     csize_f = csize_f / nchunks;
 
@@ -123,7 +123,7 @@ static int test_zfp_rate_float(blosc2_schunk* schunk) {
     return (int) (chunksize - csize_f);
 }
 
-static int test_zfp_rate_double(blosc2_schunk* schunk) {
+static int test_zfp_prec_double(blosc2_schunk* schunk) {
 
     if (schunk->typesize != 8) {
         printf("Error: This test is only for doubles.\n");
@@ -140,12 +140,12 @@ static int test_zfp_rate_double(blosc2_schunk* schunk) {
     double *data_dest = malloc(chunksize);
 
     /* Create a context for compression */
-    int zfp_rate = 37;
+    int zfp_prec = 25;
     blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
     cparams.splitmode = BLOSC_NEVER_SPLIT;
     cparams.typesize = schunk->typesize;
-    cparams.compcode = BLOSC_CODEC_ZFP_FIXED_RATE;
-    cparams.compcode_meta = zfp_rate;
+    cparams.compcode = BLOSC_CODEC_ZFP_FIXED_PRECISION;
+    cparams.compcode_meta = zfp_prec;
     cparams.filters[BLOSC2_MAX_FILTERS - 1] = BLOSC_NOFILTER;
     cparams.clevel = 5;
     cparams.nthreads = 1;
@@ -196,24 +196,22 @@ static int test_zfp_rate_double(blosc2_schunk* schunk) {
         for (int i = 0; i < (chunksize / cparams.typesize); i++) {
             printf("%f, ", data_dest[i]);
         }
-
-        double tolerance = 0.1;
+*/
+        double tolerance = 0.01;
         for (int i = 0; i < (chunksize / cparams.typesize); i++) {
             if ((data_in[i] == 0) || (data_dest[i] == 0)) {
                 if (fabs(data_in[i] - data_dest[i]) > tolerance) {
-                    printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
+                    printf("i: %d, data %.16f, dest %.16f", i, data_in[i], data_dest[i]);
                     printf("\n Decompressed data differs from original!\n");
                     return -1;
                 }
             } else if (fabs(data_in[i] - data_dest[i]) > tolerance * fmax(fabs(data_in[i]), fabs(data_dest[i]))) {
-                printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
+                printf("i: %d, data %.16f, dest %.16f", i, data_in[i], data_dest[i]);
                 printf("\n Decompressed data differs from original!\n");
                 return -1;
             }
         }
-    */
     }
-
     csize_f = csize_f / nchunks;
 
     free(data_in);
@@ -232,7 +230,7 @@ int float_cyclic() {
     blosc2_schunk *schunk = blosc2_schunk_open("example_float_cyclic.caterva");
 
     /* Run the test. */
-    int result = test_zfp_rate_float(schunk);
+    int result = test_zfp_prec_float(schunk);
     blosc2_schunk_free(schunk);
     return result;
 }
@@ -241,7 +239,7 @@ int double_same_cells() {
     blosc2_schunk *schunk = blosc2_schunk_open("example_double_same_cells.caterva");
 
     /* Run the test. */
-    int result = test_zfp_rate_double(schunk);
+    int result = test_zfp_prec_double(schunk);
     blosc2_schunk_free(schunk);
     return result;
 }
@@ -250,7 +248,7 @@ int day_month_temp() {
     blosc2_schunk *schunk = blosc2_schunk_open("example_day_month_temp.caterva");
 
     /* Run the test. */
-    int result = test_zfp_rate_float(schunk);
+    int result = test_zfp_prec_float(schunk);
     blosc2_schunk_free(schunk);
     return result;
 }
@@ -259,7 +257,7 @@ int item_prices() {
     blosc2_schunk *schunk = blosc2_schunk_open("example_item_prices.caterva");
 
     /* Run the test. */
-    int result = test_zfp_rate_float(schunk);
+    int result = test_zfp_prec_float(schunk);
     blosc2_schunk_free(schunk);
     return result;
 }
