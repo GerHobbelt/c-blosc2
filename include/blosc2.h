@@ -99,6 +99,19 @@ enum {
   BLOSC2_VERSION_FRAME_FORMAT = BLOSC2_VERSION_FRAME_FORMAT_RC1,
 };
 
+
+//!< Struct for storing data from instrumentation of codecs
+// This can be flexible because it is typically used mainly for development
+typedef struct {
+  float cratio;
+  float cspeed;
+  float filter_speed;
+  //float memory;
+  //float power;
+  uint8_t flags[4];
+} blosc2_instr;
+
+
 enum {
   BLOSC_MIN_HEADER_LENGTH = 16,
   //!< Minimum header length (Blosc1)
@@ -170,6 +183,7 @@ enum {
 enum {
   BLOSC2_USEDICT = 0x1,          //!< use dictionaries with codec
   BLOSC2_BIGENDIAN = 0x2,        //!< data is in big-endian ordering
+  BLOSC2_INSTR_CODEC = 0x80,     //!< codec is instrumented (mainly for development)
 };
 
 /**
@@ -902,6 +916,8 @@ typedef struct {
   int32_t out_size;  // the output size (in bytes)
   int32_t out_typesize;  // the output typesize
   int32_t out_offset; // offset to reach the start of the output buffer
+  int32_t nchunk;  // the current nchunk in associated schunk (if exists; if not -1)
+  int32_t nblock;  // the current nblock in associated chunk
   int32_t tid;  // thread id
   uint8_t *ttmp;  // a temporary that is able to hold several blocks for the output and is private for each thread
   size_t ttmp_nbytes;  // the size of the temporary in bytes
@@ -918,7 +934,9 @@ typedef struct {
   uint8_t *out;  // the output buffer
   int32_t size;  // the input size (in bytes)
   int32_t typesize;  // the input typesize
-  int32_t offset; // offset to reach the start of the input buffer
+  int32_t offset;  // offset to reach the start of the input buffer
+  int32_t nchunk;  // the current nchunk in associated schunk (if exists; if not -1)
+  int32_t nblock;  // the current nblock in associated chunk
   int32_t tid;  // thread id
   uint8_t *ttmp;  // a temporary that is able to hold several blocks for the output and is private for each thread
   size_t ttmp_nbytes;  // the size of the temporary in bytes
@@ -959,7 +977,7 @@ typedef struct {
   int16_t nthreads;
   //!< The number of threads to use internally (1).
   int32_t blocksize;
-  //!< The requested size of the compressed blocks (0; meaning automatic).
+  //!< The requested size of the compressed blocks (0 means automatic).
   int32_t splitmode;
   //!< Whether the blocks should be split or not.
   void* schunk;
@@ -974,6 +992,8 @@ typedef struct {
   //!< The prefilter parameters.
   blosc2_btune *udbtune;
   //!< The user-defined BTune parameters.
+  bool instr_codec;
+  //!< Whether the codec is instrumented or not
 } blosc2_cparams;
 
 /**
@@ -982,7 +1002,7 @@ typedef struct {
 static const blosc2_cparams BLOSC2_CPARAMS_DEFAULTS = {
         BLOSC_BLOSCLZ, 0, 5, 0, 8, 1, 0, BLOSC_FORWARD_COMPAT_SPLIT,
         NULL, {0, 0, 0, 0, 0, BLOSC_SHUFFLE}, {0, 0, 0, 0, 0, 0},
-        NULL, NULL, NULL};
+        NULL, NULL, NULL, 0};
 
 
 /**
@@ -1428,6 +1448,8 @@ typedef struct blosc2_schunk {
   //!< Metadata for filters. 8-bit per meta-slot.
   int32_t nchunks;
   //!< Number of chunks in super-chunk.
+  int32_t current_nchunk;
+  //!< The current chunk that is being accessed
   int64_t nbytes;
   //!< The data size + metadata size + header size (uncompressed).
   int64_t cbytes;

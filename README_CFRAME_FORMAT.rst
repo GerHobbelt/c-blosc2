@@ -106,7 +106,6 @@ using the msgpack format. Here it is the format for the *metalayers*::
         Format version.
     :``4`` and ``5``:
         Enumerated for chunk offsets.
-
         :``0``:
             32-bit
         :``1``:
@@ -225,24 +224,36 @@ If the most significant bit (7) of the most significant byte above (byte N, as l
 that represents a chunk with a run-length of special values.  The supported special values are:
 
 :special_values:
-    (``uint8``) Flags for special values.
+    (``bitfield``) Flags for special values.
 
-        :``0``:
-            A run-length of zeros.
-        :``1``:
-            A run-length of NaNs. The size of the NaN depends on the typesize.
-        :``2``:
-            Reserved.
-        :``3``:
-            Reserved.
-        :``4``:
-            Reserved.
-        :``5``:
-            Reserved.
-        :``6``:
-            Reserved.
-        :``7``:
-            Indicates a special value.  If not set, a regular value.
+    :bits 0, 1 and 2:
+        Indicate special values for the entire chunk.
+            :``0``:
+                Reserved.
+            :``1``:
+                A run of zeros.
+            :``2``:
+                A run of NaN (Not-a-Number) floats (whether f32 or f64 depends on typesize).
+            :``3``:
+                Reserved.
+            :``4``:
+                Values that are not initialized.
+            :``5``:
+                Reserved.
+            :``6``:
+                Reserved.
+            :``7``:
+                Reserved.
+    :bit 3 (``0x08``):
+        Reserved.
+    :bit 4 (``0x10``):
+        Reserved.
+    :bit 5 (``0x20``):
+        Reserved.
+    :bit 6 (``0x40``):
+        Reserved.
+    :bit 7 (``0x80``):
+        Indicates a special value.  If not set, a regular value.
 
 
 Trailer

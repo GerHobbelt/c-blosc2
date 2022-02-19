@@ -797,6 +797,9 @@ static int blosc2_intialize_header_from_context(blosc2_context* context, blosc_h
     if (context->use_dict) {
       header->blosc2_flags |= BLOSC2_USEDICT;
     }
+    if (context->blosc2_flags & BLOSC2_INSTR_CODEC) {
+      header->blosc2_flags |= BLOSC2_INSTR_CODEC;
+    }
   }
 
   return 0;
@@ -825,6 +828,8 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
     preparams.out_size = (size_t)bsize;
     preparams.out_typesize = typesize;
     preparams.out_offset = offset;
+    preparams.nblock = offset / context->blocksize;
+    preparams.nchunk = context->schunk != NULL ? context->schunk->current_nchunk : -1;
     preparams.tid = thread_context->tid;
     preparams.ttmp = thread_context->tmp;
     preparams.ttmp_nbytes = thread_context->tmp_nbytes;
@@ -962,6 +967,14 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
   uint8_t *_tmp3 = thread_context->tmp4;
   int last_filter_index = last_filter(context->filters, 'c');
   bool memcpyed = context->header_flags & (uint8_t)BLOSC_MEMCPYED;
+  bool instr_codec = context->blosc2_flags & BLOSC2_INSTR_CODEC;
+  blosc_timestamp_t last, current;
+  float filter_time = 0.f;
+
+  // See whether we have a run here
+  if (instr_codec) {
+    blosc_set_timestamp(&last);
+  }
 
   if (last_filter_index >= 0 || context->prefilter != NULL) {
     /* Apply the filter pipeline just for the prefilter */
@@ -980,6 +993,12 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
     }
   } else {
     _src = src + offset;
+  }
+
+  if (instr_codec) {
+    blosc_set_timestamp(&current);
+    filter_time = (float) blosc_elapsed_secs(last, current);
+    last = current;
   }
 
   assert(context->clevel > 0);
@@ -1004,17 +1023,39 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
       const uint8_t *ip = (uint8_t *) _src + j * neblock;
       const uint8_t *ipbound = (uint8_t *) _src + (j + 1) * neblock;
 
-      // See whether we have a run here
       if (context->header_overhead == BLOSC_EXTENDED_HEADER_LENGTH && get_run(ip, ipbound)) {
         // A run
         int32_t value = _src[j * neblock];
         if (ntbytes > destsize) {
           return 0;    /* Non-compressible data */
         }
+
+        if (instr_codec) {
+          blosc_set_timestamp(&current);
+          int32_t instr_size = sizeof(blosc2_instr);
+          ntbytes += instr_size;
+          ctbytes += instr_size;
+          if (ntbytes > destsize) {
+            return 0;    /* Non-compressible data */
+          }
+          _sw32(dest - 4, instr_size);
+          blosc2_instr *desti = (blosc2_instr *)dest;
+          memset(desti, 0, sizeof(blosc2_instr));
+          // Special values have an overhead of about 1 int32
+          int32_t ssize = value == 0 ? sizeof(int32_t) : sizeof(int32_t) + 1;
+          desti->cratio = (float) neblock / (float) ssize;
+          float ctime = (float) blosc_elapsed_secs(last, current);
+          desti->cspeed = (float) neblock / ctime;
+          desti->filter_speed = (float) neblock / filter_time;
+          desti->flags[0] = 1;    // mark a runlen
+          dest += instr_size;
+          continue;
+        }
+
         // Encode the repeated byte in the first (LSB) byte of the length of the split.
         _sw32(dest - 4, -value);    // write the value in two's complement
         if (value > 0) {
-          // Mark the encoding as a run-length (== 0 is always a 0's run)
+          // Mark encoding as a run-length (== 0 is always a 0's run)
           ntbytes += 1;
           ctbytes += 1;
           if (ntbytes > destsize) {
@@ -1106,6 +1147,28 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
       /* cbytes should never be negative */
       return BLOSC2_ERROR_DATA;
     }
+
+    if (instr_codec) {
+      blosc_set_timestamp(&current);
+      int32_t instr_size = sizeof(blosc2_instr);
+      ntbytes += instr_size;
+      ctbytes += instr_size;
+      if (ntbytes > destsize) {
+        return 0;    /* Non-compressible data */
+      }
+      _sw32(dest - 4, instr_size);
+      float ctime = (float)blosc_elapsed_secs(last, current);
+      blosc2_instr *desti = (blosc2_instr *)dest;
+      memset(desti, 0, sizeof(blosc2_instr));
+      // cratio is computed having into account 1 additional int (csize)
+      desti->cratio = (float)neblock / (float)(cbytes + sizeof(int32_t));
+      desti->cspeed = (float)neblock / ctime;
+      desti->filter_speed = (float) neblock / filter_time;
+      dest += instr_size;
+
+      continue;
+    }
+
     if (!dict_training) {
       if (cbytes == 0 || cbytes == neblock) {
         /* The compressor has been unable to compress data at all. */
@@ -1131,8 +1194,8 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
 
 /* Process the filter pipeline (decompression mode) */
 int pipeline_backward(struct thread_context* thread_context, const int32_t bsize, uint8_t* dest,
-               const int32_t offset, uint8_t* src, uint8_t* tmp,
-               uint8_t* tmp2, int last_filter_index, int32_t nblock) {
+                      const int32_t offset, uint8_t* src, uint8_t* tmp,
+                      uint8_t* tmp2, int last_filter_index, int32_t nblock) {
   blosc2_context* context = thread_context->parent_context;
   int32_t typesize = context->typesize;
   uint8_t* filters = context->filters;
@@ -1250,6 +1313,8 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
     postparams.size = bsize;
     postparams.typesize = typesize;
     postparams.offset = nblock * context->blocksize;
+    postparams.nchunk = context->schunk != NULL ? context->schunk->current_nchunk : -1;
+    postparams.nblock = nblock;
     postparams.tid = thread_context->tid;
     postparams.ttmp = thread_context->tmp;
     postparams.ttmp_nbytes = thread_context->tmp_nbytes;
@@ -1375,6 +1440,7 @@ static int blosc_d(
   int32_t ntbytes = 0;           /* number of uncompressed bytes in block */
   uint8_t* _dest;
   int32_t typesize = context->typesize;
+  bool instr_codec = context->blosc2_flags & BLOSC2_INSTR_CODEC;
   const char* compname;
   int rc;
 
@@ -1509,6 +1575,8 @@ static int blosc_d(
       postparams.size = bsize;
       postparams.typesize = typesize;
       postparams.offset = nblock * context->blocksize;
+      postparams.nchunk = context->schunk != NULL ? context->schunk->current_nchunk : -1;
+      postparams.nblock = nblock;
       postparams.tid = thread_context->tid;
       postparams.ttmp = thread_context->tmp;
       postparams.ttmp_nbytes = thread_context->tmp_nbytes;
@@ -1532,15 +1600,19 @@ static int blosc_d(
   srcsize -= src_offset;
 
   int last_filter_index = last_filter(filters, 'd');
-
-  if (((last_filter_index >= 0) &&
-      (next_filter(filters, BLOSC2_MAX_FILTERS, 'd') != BLOSC_DELTA)) ||
-      context->postfilter != NULL) {
-   // We are making use of some filter, so use a temp for destination
-   _dest = tmp;
-  } else {
+  if (instr_codec) {
+    // If instrumented, we don't want to run the filters
+    _dest = dest + dest_offset;
+  }
+  else if (((last_filter_index >= 0) &&
+       (next_filter(filters, BLOSC2_MAX_FILTERS, 'd') != BLOSC_DELTA)) ||
+    context->postfilter != NULL) {
+    // We are making use of some filter, so use a temp for destination
+    _dest = tmp;
+  }
+  else {
     // If no filters, or only DELTA in pipeline
-   _dest = dest + dest_offset;
+    _dest = dest + dest_offset;
   }
 
   /* The number of compressed data streams for this block */
@@ -1675,12 +1747,14 @@ static int blosc_d(
     ntbytes += nbytes;
   } /* Closes j < nstreams */
 
-  if (last_filter_index >= 0 || context->postfilter != NULL) {
-    /* Apply regular filter pipeline */
-    int errcode = pipeline_backward(thread_context, bsize, dest, dest_offset, tmp, tmp2, tmp3,
-                             last_filter_index, nblock);
-    if (errcode < 0)
-      return errcode;
+  if (!instr_codec) {
+    if (last_filter_index >= 0 || context->postfilter != NULL) {
+      /* Apply regular filter pipeline */
+      int errcode = pipeline_backward(thread_context, bsize, dest, dest_offset, tmp, tmp2, tmp3,
+                                      last_filter_index, nblock);
+      if (errcode < 0)
+        return errcode;
+    }
   }
 
   /* Return the number of uncompressed bytes */
@@ -1700,7 +1774,7 @@ static int serial_blosc(struct thread_context* thread_context) {
   int dict_training = context->use_dict && (context->dict_cdict == NULL);
   bool memcpyed = context->header_flags & (uint8_t)BLOSC_MEMCPYED;
   if (!context->do_compress && context->special_type) {
-    // Fake a runlen as if its a memcpyed chunk
+    // Fake a runlen as if it was a memcpyed chunk
     memcpyed = true;
   }
 
@@ -2228,6 +2302,12 @@ int blosc_compress_context(blosc2_context* context) {
 
   /* Set the number of compressed bytes in header */
   _sw32(context->dest + BLOSC2_CHUNK_CBYTES, ntbytes);
+  if (context->blosc2_flags & BLOSC2_INSTR_CODEC) {
+    int dont_split = (context->header_flags & 0x10) >> 4;
+    int blocksize = dont_split ? sizeof(blosc2_instr) : sizeof(blosc2_instr) * context->typesize;
+    _sw32(context->dest + BLOSC2_CHUNK_NBYTES, context->nblocks * blocksize);
+    _sw32(context->dest + BLOSC2_CHUNK_BLOCKSIZE, blocksize);
+  }
 
   /* Set the number of bytes in dest buffer (might be useful for btune) */
   context->destsize = ntbytes;
@@ -3492,6 +3572,9 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   context->compcode_meta = cparams.compcode_meta;
   context->clevel = cparams.clevel;
   context->use_dict = cparams.use_dict;
+  if (cparams.instr_codec) {
+    context->blosc2_flags = BLOSC2_INSTR_CODEC;
+  }
   context->typesize = cparams.typesize;
   for (int i = 0; i < BLOSC2_MAX_FILTERS; i++) {
     context->filters[i] = cparams.filters[i];
@@ -3597,6 +3680,7 @@ int blosc2_ctx_get_cparams(blosc2_context *ctx, blosc2_cparams *cparams) {
   cparams->compcode_meta = ctx->compcode_meta;
   cparams->clevel = ctx->clevel;
   cparams->use_dict = ctx->use_dict;
+  cparams->instr_codec = ctx->blosc2_flags & BLOSC2_INSTR_CODEC;
   cparams->typesize = ctx->typesize;
   cparams->nthreads = ctx->nthreads;
   cparams->blocksize = ctx->blocksize;
