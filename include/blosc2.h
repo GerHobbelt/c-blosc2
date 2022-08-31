@@ -9,16 +9,16 @@
 **********************************************************************/
 
 /*********************************************************************
-  @file blosc.h
-  @brief Blosc header file.
+  @file blosc2.h
+  @brief Blosc2 header file.
 
-  This file contains Blosc public API and the structures needed to use it.
+  This file contains Blosc2 public API and the structures needed to use it.
   @author The Blosc Developers <blosc@blosc.org>
 **********************************************************************/
 
 
-#ifndef BLOSC_H
-#define BLOSC_H
+#ifndef BLOSC2_H
+#define BLOSC2_H
 
 #include <limits.h>
 #include <stdlib.h>
@@ -48,14 +48,53 @@ extern "C" {
 extern "C" {
 #endif
 
+// For compatibility with the Blosc 1.x series
+#ifdef BLOSC1_COMPAT
+  // Blosc2 symbols that should be accessible from Blosc 1.x API
+  #define BLOSC2_VERSION_MAJOR BLOSC_VERSION_MAJOR
+  #define BLOSC2_VERSION_MINOR BLOSC_VERSION_MINOR
+  #define BLOSC2_VERSION_RELEASE BLOSC_VERSION_RELEASE
+  #define BLOSC2_VERSION_STRING BLOSC_VERSION_STRING
+  #define BLOSC2_VERSION_DATE BLOSC_VERSION_DATE
+  #define BLOSC2_MAX_OVERHEAD BLOSC_MAX_OVERHEAD
+  #define BLOSC2_MAX_BUFFERSIZE BLOSC_MAX_BUFFERSIZE
+
+  // API that keeps the blosc1_ prefix
+  #define blosc1_compress blosc_compress
+  #define blosc1_decompress blosc_decompress
+  #define blosc1_getitem blosc_getitem
+  #define blosc1_get_compressor blosc_get_compressor
+  #define blosc1_set_compressor blosc_set_compressor
+  #define blosc1_cbuffer_sizes blosc_cbuffer_sizes
+  #define blosc1_cbuffer_validate blosc_cbuffer_validate
+  #define blosc1_cbuffer_metainfo blosc_cbuffer_metainfo
+  #define blosc1_get_blocksize blosc_get_blocksize
+  #define blosc1_set_blocksize blosc_set_blocksize
+  #define blosc1_set_splitmode blosc_set_splitmode
+
+  // API that has been migrated to blosc2_ prefix
+  #define blosc2_init blosc_init
+  #define blosc2_destroy blosc_destroy
+  #define blosc2_free_resources blosc_free_resources
+  #define blosc2_get_nthreads blosc_get_nthreads
+  #define blosc2_set_nthreads blosc_set_nthreads
+  #define blosc2_compcode_to_compname blosc_compcode_to_compname
+  #define blosc2_compname_to_compcode blosc_compname_to_compcode
+  #define blosc2_list_compressors blosc_list_compressors
+  #define blosc2_get_version_string blosc_get_version_string
+  #define blosc2_get_complib_info blosc_get_complib_info
+  #define blosc2_cbuffer_versions blosc_cbuffer_versions
+  #define blosc2_cbuffer_complib blosc_cbuffer_complib
+#endif
+
 
 /* Version numbers */
-#define BLOSC_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC_VERSION_MINOR    2    /* for minor interface/format changes  */
-#define BLOSC_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
+#define BLOSC2_VERSION_MINOR    3    /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC_VERSION_STRING   "2.2.0"  /* string version.  Sync with above! */
-#define BLOSC_VERSION_DATE     "$Date:: 2022-07-05 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.3.0"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2022-08-18 #$"    /* date version */
 
 
 /* The maximum number of dimensions for caterva arrays */
@@ -82,12 +121,12 @@ enum {
      4 -> Blosc 2.x beta.1 series
      5 -> Blosc 2.x stable series
      */
-  BLOSC_VERSION_FORMAT_PRE1 = 1,
+  BLOSC1_VERSION_FORMAT_PRE1 = 1,
   BLOSC1_VERSION_FORMAT = 2,
   BLOSC2_VERSION_FORMAT_ALPHA = 3,
   BLOSC2_VERSION_FORMAT_BETA1 = 4,
   BLOSC2_VERSION_FORMAT_STABLE = 5,
-  BLOSC_VERSION_FORMAT = BLOSC2_VERSION_FORMAT_STABLE,
+  BLOSC2_VERSION_FORMAT = BLOSC2_VERSION_FORMAT_STABLE,
 };
 
 
@@ -117,19 +156,23 @@ typedef struct {
 
 
 enum {
+#ifndef BLOSC_H
   BLOSC_MIN_HEADER_LENGTH = 16,
   //!< Minimum header length (Blosc1)
+#endif // BLOSC_H
   BLOSC_EXTENDED_HEADER_LENGTH = 32,
   //!< Extended header length (Blosc2, see README_HEADER)
-  BLOSC_MAX_OVERHEAD = BLOSC_EXTENDED_HEADER_LENGTH,
+  BLOSC2_MAX_OVERHEAD = BLOSC_EXTENDED_HEADER_LENGTH,
   //!< The maximum overhead during compression in bytes. This equals
   //!< to @ref BLOSC_EXTENDED_HEADER_LENGTH now, but can be higher in future
   //!< implementations.
-  BLOSC_MAX_BUFFERSIZE = (INT_MAX - BLOSC_MAX_OVERHEAD),
+  BLOSC2_MAX_BUFFERSIZE = (INT_MAX - BLOSC2_MAX_OVERHEAD),
   //!< Maximum source buffer size to be compressed
+#ifndef BLOSC_H
   BLOSC_MAX_TYPESIZE = UINT8_MAX,
   //!< Maximum typesize before considering source buffer as a stream of bytes.
   //!< Cannot be larger than 255.
+#endif // BLOSC_H
   BLOSC_MIN_BUFFERSIZE = 128,
   //!< Minimum buffer size to be compressed. Cannot be smaller than 66.
 };
@@ -157,13 +200,15 @@ enum {
 /**
  * @brief Codes for filters.
  *
- * @sa #blosc_compress
+ * @sa #blosc1_compress
  */
 enum {
+#ifndef BLOSC_H
   BLOSC_NOSHUFFLE = 0,   //!< No shuffle (for compatibility with Blosc1).
   BLOSC_NOFILTER = 0,    //!< No filter.
   BLOSC_SHUFFLE = 1,     //!< Byte-wise shuffle.
   BLOSC_BITSHUFFLE = 2,  //!< Bit-wise shuffle.
+#endif // BLOSC_H
   BLOSC_DELTA = 3,       //!< Delta filter.
   BLOSC_TRUNC_PREC = 4,  //!< Truncate precision filter.
   BLOSC_LAST_FILTER = 5, //!< sentinel
@@ -172,12 +217,14 @@ enum {
 };
 
 /**
- * @brief Codes for internal flags (see blosc_cbuffer_metainfo)
+ * @brief Codes for internal flags (see blosc1_cbuffer_metainfo)
  */
 enum {
+#ifndef BLOSC_H
   BLOSC_DOSHUFFLE = 0x1,     //!< byte-wise shuffle
   BLOSC_MEMCPYED = 0x2,      //!< plain copy
   BLOSC_DOBITSHUFFLE = 0x4,  //!< bit-wise shuffle
+#endif // BLOSC_H
   BLOSC_DODELTA = 0x8,       //!< delta coding
 };
 
@@ -217,11 +264,13 @@ enum {
  * @brief Codes for the different compressors shipped with Blosc
  */
 enum {
+#ifndef BLOSC_H
   BLOSC_BLOSCLZ = 0,
   BLOSC_LZ4 = 1,
   BLOSC_LZ4HC = 2,
   BLOSC_ZLIB = 4,
   BLOSC_ZSTD = 5,
+#endif // BLOSC_H
   BLOSC_LAST_CODEC = 6,
   //!< Determine the last codec defined by Blosc.
   BLOSC_LAST_REGISTERED_CODEC = BLOSC2_GLOBAL_REGISTERED_CODECS_START + BLOSC2_GLOBAL_REGISTERED_CODECS - 1,
@@ -231,20 +280,24 @@ enum {
 
 // Names for the different compressors shipped with Blosc
 
+#ifndef BLOSC_H
 #define BLOSC_BLOSCLZ_COMPNAME   "blosclz"
 #define BLOSC_LZ4_COMPNAME       "lz4"
 #define BLOSC_LZ4HC_COMPNAME     "lz4hc"
 #define BLOSC_ZLIB_COMPNAME      "zlib"
 #define BLOSC_ZSTD_COMPNAME      "zstd"
+#endif // BLOSC_H
 
 /**
  * @brief Codes for compression libraries shipped with Blosc (code must be < 8)
  */
 enum {
+#ifndef BLOSC_H
   BLOSC_BLOSCLZ_LIB = 0,
   BLOSC_LZ4_LIB = 1,
   BLOSC_ZLIB_LIB = 3,
   BLOSC_ZSTD_LIB = 4,
+#endif // BLOSC_H
   BLOSC_UDCODEC_LIB = 6,
   BLOSC_SCHUNK_LIB = 7,   //!< compressor library in super-chunk header
 };
@@ -252,21 +305,25 @@ enum {
 /**
  * @brief Names for the different compression libraries shipped with Blosc
  */
+#ifndef BLOSC_H
 #define BLOSC_BLOSCLZ_LIBNAME   "BloscLZ"
 #define BLOSC_LZ4_LIBNAME       "LZ4"
 #define BLOSC_ZLIB_LIBNAME      "Zlib"
 #define BLOSC_ZSTD_LIBNAME      "Zstd"
+#endif // BLOSC_H
 
 /**
  * @brief The codes for compressor formats shipped with Blosc
  */
 enum {
+#ifndef BLOSC_H
   BLOSC_BLOSCLZ_FORMAT = BLOSC_BLOSCLZ_LIB,
   BLOSC_LZ4_FORMAT = BLOSC_LZ4_LIB,
   //!< LZ4HC and LZ4 share the same format
   BLOSC_LZ4HC_FORMAT = BLOSC_LZ4_LIB,
   BLOSC_ZLIB_FORMAT = BLOSC_ZLIB_LIB,
   BLOSC_ZSTD_FORMAT = BLOSC_ZSTD_LIB,
+#endif // BLOSC_H
   BLOSC_UDCODEC_FORMAT = BLOSC_UDCODEC_LIB,
 };
 
@@ -275,11 +332,13 @@ enum {
  * All versions here starts at 1
  */
 enum {
+#ifndef BLOSC_H
   BLOSC_BLOSCLZ_VERSION_FORMAT = 1,
   BLOSC_LZ4_VERSION_FORMAT = 1,
   BLOSC_LZ4HC_VERSION_FORMAT = 1,  /* LZ4HC and LZ4 share the same format */
   BLOSC_ZLIB_VERSION_FORMAT = 1,
   BLOSC_ZSTD_VERSION_FORMAT = 1,
+#endif // BLOSC_H
   BLOSC_UDCODEC_VERSION_FORMAT = 1,
 };
 
@@ -289,12 +348,14 @@ enum {
  * AUTO for nearly optimal behaviour (based on heuristics).
  * FORWARD_COMPAT provides best forward compatibility (default).
  */
+#ifndef BLOSC_H
 enum {
   BLOSC_ALWAYS_SPLIT = 1,
   BLOSC_NEVER_SPLIT = 2,
   BLOSC_AUTO_SPLIT = 3,
   BLOSC_FORWARD_COMPAT_SPLIT = 4,
 };
+#endif // BLOSC_H
 
 /**
  * @brief Offsets for fields in Blosc2 chunk header.
@@ -363,6 +424,7 @@ enum {
   BLOSC2_ERROR_FILE_REMOVE = -31,     //!< Remove file failure
 };
 
+
 /**
  * @brief Initialize the Blosc library environment.
  *
@@ -370,20 +432,20 @@ enum {
  * Blosc to be used simultaneously in a multi-threaded environment, in
  * which case you can use the #blosc2_compress_ctx #blosc2_decompress_ctx pair.
  *
- * @sa #blosc_destroy
+ * @sa #blosc2_destroy
  */
-BLOSC_EXPORT void blosc_init(void);
+BLOSC_EXPORT void blosc2_init(void);
 
 
 /**
  * @brief Destroy the Blosc library environment.
  *
  * You must call this after to you are done with all the Blosc calls,
- * unless you have not used blosc_init() before.
+ * unless you have not used blosc2_init() before.
  *
- * @sa #blosc_init
+ * @sa #blosc2_init
  */
-BLOSC_EXPORT void blosc_destroy(void);
+BLOSC_EXPORT void blosc2_destroy(void);
 
 
 /**
@@ -414,7 +476,7 @@ BLOSC_EXPORT void blosc_destroy(void);
  * must have at least the size of @p destsize.
  * @param destsize The size of the dest buffer. Blosc
  * guarantees that if you set @p destsize to, at least,
- * (@p nbytes + #BLOSC_MAX_OVERHEAD), the compression will always succeed.
+ * (@p nbytes + #BLOSC2_MAX_OVERHEAD), the compression will always succeed.
  *
  * @return The number of bytes compressed.
  * If @p src buffer cannot be compressed into @p destsize, the return
@@ -438,39 +500,37 @@ BLOSC_EXPORT void blosc_destroy(void);
  * overwrite the @p doshuffle parameter before the compression process
  * starts.
  *
- * * **BLOSC_DELTA=(1|0)**: This will call #blosc_set_delta() before the
+ * * **BLOSC_DELTA=(1|0)**: This will call #blosc2_set_delta() before the
  * compression process starts.
  *
  * * **BLOSC_TYPESIZE=(INTEGER)**: This will overwrite the @p typesize
  * parameter before the compression process starts.
  *
  * * **BLOSC_COMPRESSOR=[BLOSCLZ | LZ4 | LZ4HC | SNAPPY | ZLIB | ZSTD]**:
- * This will call #blosc_set_compressor(BLOSC_COMPRESSOR) before the
- * compression process starts.
+ * This will call #blosc1_set_compressor before the compression process starts.
  *
  * * **BLOSC_NTHREADS=(INTEGER)**: This will call
- * #blosc_set_nthreads(BLOSC_NTHREADS) before the compression process
- * starts.
+ * #blosc2_set_nthreads before the compression process starts.
  *
  * * **BLOSC_BLOCKSIZE=(INTEGER)**: This will call
- * #blosc_set_blocksize(BLOSC_BLOCKSIZE) before the compression process
- * starts.  *NOTE:* The *blocksize* is a critical parameter with
+ * #blosc1_set_blocksize before the compression process starts.
+ * *NOTE:* The *blocksize* is a critical parameter with
  * important restrictions in the allowed values, so use this with care.
  *
- * * **BLOSC_NOLOCK=(ANY VALUE)**: This will call *blosc2_compress_ctx()* under
+ * * **BLOSC_NOLOCK=(ANY VALUE)**: This will call #blosc2_compress_ctx under
  * the hood, with the *compressor*, *blocksize* and
  * *numinternalthreads* parameters set to the same as the last calls to
- * #blosc_set_compressor, #blosc_set_blocksize and
- * #blosc_set_nthreads. *BLOSC_CLEVEL*, *BLOSC_SHUFFLE*, *BLOSC_DELTA* and
+ * #blosc1_set_compressor, #blosc1_set_blocksize and
+ * #blosc2_set_nthreads. *BLOSC_CLEVEL*, *BLOSC_SHUFFLE*, *BLOSC_DELTA* and
  * *BLOSC_TYPESIZE* environment vars will also be honored.
  *
  * @endparblock
  *
- * @sa blosc_decompress
+ * @sa blosc1_decompress
  */
-BLOSC_EXPORT int blosc_compress(int clevel, int doshuffle, size_t typesize,
-                                size_t nbytes, const void* src, void* dest,
-                                size_t destsize);
+BLOSC_EXPORT int blosc1_compress(int clevel, int doshuffle, size_t typesize,
+                                 size_t nbytes, const void* src, void* dest,
+                                 size_t destsize);
 
 
 /**
@@ -483,7 +543,7 @@ BLOSC_EXPORT int blosc_compress(int clevel, int doshuffle, size_t typesize,
  * buffer more than what is specified in @p destsize.
  *
  * @remark In case you want to keep under control the number of bytes read from
- * source, you can call #blosc_cbuffer_sizes first to check whether the
+ * source, you can call #blosc1_cbuffer_sizes first to check whether the
  * @p nbytes (i.e. the number of bytes to be read from @p src buffer by this
  * function) in the compressed buffer is ok with you.
  *
@@ -503,18 +563,18 @@ BLOSC_EXPORT int blosc_compress(int clevel, int doshuffle, size_t typesize,
  * Here are the ones supported:
  *
  * * **BLOSC_NTHREADS=(INTEGER)**: This will call
- * #blosc_set_nthreads(BLOSC_NTHREADS) before the proper decompression
+ * #blosc2_set_nthreads before the proper decompression
  * process starts.
  *
  * * **BLOSC_NOLOCK=(ANY VALUE)**: This will call #blosc2_decompress_ctx
  * under the hood, with the *numinternalthreads* parameter set to the
- * same value as the last call to #blosc_set_nthreads.
+ * same value as the last call to #blosc2_set_nthreads.
  *
  * @endparblock
  *
- * @sa blosc_compress
+ * @sa blosc1_compress
  */
-BLOSC_EXPORT int blosc_decompress(const void* src, void* dest, size_t destsize);
+BLOSC_EXPORT int blosc1_decompress(const void* src, void* dest, size_t destsize);
 
 
 /**
@@ -531,12 +591,12 @@ BLOSC_EXPORT int blosc_decompress(const void* src, void* dest, size_t destsize);
  * @return The number of bytes copied to @p dest or a negative value if
  * some error happens.
  */
-BLOSC_EXPORT int blosc_getitem(const void* src, int start, int nitems, void* dest);
+BLOSC_EXPORT int blosc1_getitem(const void* src, int start, int nitems, void* dest);
 
 /**
  * @brief Get @p nitems (of @p typesize size) in @p src buffer starting in @p start.
  * The items are returned in @p dest buffer. The dest buffer should have enough space
- * for storing all items. This function is a more secure version of #blosc_getitem.
+ * for storing all items. This function is a more secure version of #blosc1_getitem.
  *
  * @param src The compressed buffer holding the data to be retrieved.
  * @param srcsize Size of the compressed buffer.
@@ -556,7 +616,7 @@ BLOSC_EXPORT int blosc2_getitem(const void* src, int32_t srcsize, int start, int
   Pointer to a callback function that executes `dojob(jobdata + i*jobdata_elsize)` for `i = 0 to numjobs-1`,
   possibly in parallel threads (but not returning until all `dojob` calls have returned).   This allows the
   caller to provide a custom threading backend as an alternative to the default Blosc-managed threads.
-  `callback_data` is passed through from `blosc_set_threads_callback`.
+  `callback_data` is passed through from `blosc2_set_threads_callback`.
  */
 typedef void (*blosc_threads_callback)(void *callback_data, void (*dojob)(void *), int numjobs, size_t jobdata_elsize, void *jobdata);
 
@@ -566,14 +626,14 @@ typedef void (*blosc_threads_callback)(void *callback_data, void (*dojob)(void *
   before any other Blosc function: it affects all Blosc contexts.  Passing `NULL` uses the default
   Blosc threading backend.  The `callback_data` argument is passed through to the callback.
  */
-BLOSC_EXPORT void blosc_set_threads_callback(blosc_threads_callback callback, void *callback_data);
+BLOSC_EXPORT void blosc2_set_threads_callback(blosc_threads_callback callback, void *callback_data);
 
 
 /**
  * @brief Returns the current number of threads that are used for
  * compression/decompression.
  */
-BLOSC_EXPORT int16_t blosc_get_nthreads(void);
+BLOSC_EXPORT int16_t blosc2_get_nthreads(void);
 
 
 /**
@@ -586,7 +646,7 @@ BLOSC_EXPORT int16_t blosc_get_nthreads(void);
  *
  * @return The previous number of threads.
  */
-BLOSC_EXPORT int16_t blosc_set_nthreads(int16_t nthreads);
+BLOSC_EXPORT int16_t blosc2_set_nthreads(int16_t nthreads);
 
 
 /**
@@ -594,7 +654,7 @@ BLOSC_EXPORT int16_t blosc_set_nthreads(int16_t nthreads);
  *
  * @return The string identifying the compressor being used.
  */
-BLOSC_EXPORT const char* blosc_get_compressor(void);
+BLOSC_EXPORT const char* blosc1_get_compressor(void);
 
 
 /**
@@ -608,7 +668,7 @@ BLOSC_EXPORT const char* blosc_get_compressor(void);
  * is not recognized, or there is not support for it in this build,
  * it returns a -1.
  */
-BLOSC_EXPORT int blosc_set_compressor(const char* compname);
+BLOSC_EXPORT int blosc1_set_compressor(const char* compname);
 
 
 /**
@@ -619,7 +679,7 @@ BLOSC_EXPORT int blosc_set_compressor(const char* compname);
  *
  * This call should always succeed.
  */
-BLOSC_EXPORT void blosc_set_delta(int dodelta);
+BLOSC_EXPORT void blosc2_set_delta(int dodelta);
 
 
 /**
@@ -631,7 +691,7 @@ BLOSC_EXPORT void blosc_set_delta(int dodelta);
  * @return The compressor code. If the compressor code is not recognized,
  * or there is not support for it in this build, -1 is returned.
  */
-BLOSC_EXPORT int blosc_compcode_to_compname(int compcode, const char** compname);
+BLOSC_EXPORT int blosc2_compcode_to_compname(int compcode, const char** compname);
 
 
 /**
@@ -642,7 +702,7 @@ BLOSC_EXPORT int blosc_compcode_to_compname(int compcode, const char** compname)
  * @return The compressor code. If the compressor name is not recognized,
  * or there is not support for it in this build, -1 is returned instead.
  */
-BLOSC_EXPORT int blosc_compname_to_compcode(const char* compname);
+BLOSC_EXPORT int blosc2_compname_to_compcode(const char* compname);
 
 
 /**
@@ -656,7 +716,7 @@ BLOSC_EXPORT int blosc_compname_to_compcode(const char* compname);
  *
  * This function should always succeed.
  */
-BLOSC_EXPORT const char* blosc_list_compressors(void);
+BLOSC_EXPORT const char* blosc2_list_compressors(void);
 
 
 /**
@@ -665,7 +725,7 @@ BLOSC_EXPORT const char* blosc_list_compressors(void);
  * @return The string with the current Blosc version.
  * Useful for dynamic libraries.
  */
-BLOSC_EXPORT const char* blosc_get_version_string(void);
+BLOSC_EXPORT const char* blosc2_get_version_string(void);
 
 
 /**
@@ -683,8 +743,8 @@ BLOSC_EXPORT const char* blosc_get_version_string(void);
  * @return The code for the compression library (>=0). If it is not supported,
  * this function returns -1.
  */
-BLOSC_EXPORT int blosc_get_complib_info(const char* compname, char** complib,
-                                        char** version);
+BLOSC_EXPORT int blosc2_get_complib_info(const char* compname, char** complib,
+                                         char** version);
 
 
 /**
@@ -694,7 +754,7 @@ BLOSC_EXPORT int blosc_get_complib_info(const char* compname, char** complib,
  * @return A 0 if succeeds, in case of problems releasing the resources,
  * it returns a negative number.
  */
-BLOSC_EXPORT int blosc_free_resources(void);
+BLOSC_EXPORT int blosc2_free_resources(void);
 
 
 /**
@@ -708,13 +768,13 @@ BLOSC_EXPORT int blosc_free_resources(void);
  * @param cbytes The pointer where the number of compressed bytes will be put.
  * @param blocksize The pointer where the block size will be put.
  *
- * You only need to pass the first BLOSC_EXTENDED_HEADER_LENGTH bytes of a
+ * You only need to pass the first BLOSC_MIN_HEADER_LENGTH bytes of a
  * compressed buffer for this call to work.
  *
  * This function should always succeed.
  */
-BLOSC_EXPORT void blosc_cbuffer_sizes(const void* cbuffer, size_t* nbytes,
-                                      size_t* cbytes, size_t* blocksize);
+BLOSC_EXPORT void blosc1_cbuffer_sizes(const void* cbuffer, size_t* nbytes,
+                                       size_t* cbytes, size_t* blocksize);
 /**
  * @brief Get information about a compressed buffer, namely the number of
  * uncompressed bytes (@p nbytes) and compressed (@p cbytes). It also
@@ -726,7 +786,9 @@ BLOSC_EXPORT void blosc_cbuffer_sizes(const void* cbuffer, size_t* nbytes,
  * @param cbytes The pointer where the number of compressed bytes will be put.
  * @param blocksize The pointer where the block size will be put.
  *
- * You only need to pass the first BLOSC_EXTENDED_HEADER_LENGTH bytes of a
+ * @note: if any of the nbytes, cbytes or blocksize is NULL, it will not be returned.
+ *
+ * You only need to pass the first BLOSC_MIN_HEADER_LENGTH bytes of a
  * compressed buffer for this call to work.
  *
  * @return On failure, returns negative value.
@@ -735,10 +797,10 @@ BLOSC_EXPORT int blosc2_cbuffer_sizes(const void* cbuffer, int32_t* nbytes,
                                       int32_t* cbytes, int32_t* blocksize);
 
 /**
- * @brief Checks that the compressed buffer starting at @cbuffer of length @cbytes may
- * contain valid blosc compressed data, and that it is safe to call
- * blosc_decompress/blosc_decompress_ctx/blosc_getitem.
- * On success, returns 0 and sets @nbytes to the size of the uncompressed data.
+ * @brief Checks that the compressed buffer starting at @p cbuffer of length @p cbytes
+ * may contain valid blosc compressed data, and that it is safe to call
+ * blosc1_decompress/blosc1_getitem.
+ * On success, returns 0 and sets @p nbytes to the size of the uncompressed data.
  * This does not guarantee that the decompression function won't return an error,
  * but does guarantee that it is safe to attempt decompression.
  *
@@ -748,8 +810,8 @@ BLOSC_EXPORT int blosc2_cbuffer_sizes(const void* cbuffer, int32_t* nbytes,
  *
  * @return On failure, returns negative value.
  */
-BLOSC_EXPORT int blosc_cbuffer_validate(const void* cbuffer, size_t cbytes,
-                                        size_t* nbytes);
+BLOSC_EXPORT int blosc1_cbuffer_validate(const void* cbuffer, size_t cbytes,
+                                         size_t* nbytes);
 
 /**
  * @brief Get information about a compressed buffer, namely the type size
@@ -771,8 +833,8 @@ BLOSC_EXPORT int blosc_cbuffer_validate(const void* cbuffer, size_t cbytes,
  *
  * This function should always succeed.
  */
-BLOSC_EXPORT void blosc_cbuffer_metainfo(const void* cbuffer, size_t* typesize,
-                                         int* flags);
+BLOSC_EXPORT void blosc1_cbuffer_metainfo(const void* cbuffer, size_t* typesize,
+                                          int* flags);
 
 
 /**
@@ -786,8 +848,8 @@ BLOSC_EXPORT void blosc_cbuffer_metainfo(const void* cbuffer, size_t* typesize,
  *
  * This function should always succeed.
  */
-BLOSC_EXPORT void blosc_cbuffer_versions(const void* cbuffer, int* version,
-                                         int* versionlz);
+BLOSC_EXPORT void blosc2_cbuffer_versions(const void* cbuffer, int* version,
+                                          int* versionlz);
 
 
 /**
@@ -799,7 +861,7 @@ BLOSC_EXPORT void blosc_cbuffer_versions(const void* cbuffer, int* version,
  *
  * This function should always succeed.
  */
-BLOSC_EXPORT const char* blosc_cbuffer_complib(const void* cbuffer);
+BLOSC_EXPORT const char* blosc2_cbuffer_complib(const void* cbuffer);
 
 /*********************************************************************
   Structures and functions related with user-defined input/output.
@@ -879,7 +941,7 @@ static const blosc2_io BLOSC2_IO_DEFAULTS = {
 /**
  * @brief Register a user-defined input/output callbacks in Blosc.
  *
- * @param filter The callbacks API to register.
+ * @param io The callbacks API to register.
  *
  * @return 0 if succeeds. Else a negative code is returned.
  */
@@ -1004,8 +1066,10 @@ typedef struct {
  * @brief Default struct for compression params meant for user initialization.
  */
 static const blosc2_cparams BLOSC2_CPARAMS_DEFAULTS = {
-        BLOSC_BLOSCLZ, 0, 5, 0, 8, 1, 0, BLOSC_FORWARD_COMPAT_SPLIT,
-        NULL, {0, 0, 0, 0, 0, BLOSC_SHUFFLE}, {0, 0, 0, 0, 0, 0},
+        BLOSC_BLOSCLZ, 0, 5, 0, 8, 1, 0,
+        BLOSC_FORWARD_COMPAT_SPLIT, NULL,
+        .filters={0, 0, 0, 0, 0, BLOSC_SHUFFLE},
+        .filters_meta={0, 0, 0, 0, 0, 0},
         NULL, NULL, NULL, 0};
 
 
@@ -1062,7 +1126,7 @@ BLOSC_EXPORT void blosc2_free_ctx(blosc2_context* context);
 /**
  * @brief Create a @p cparams associated to a context.
  *
- * @param schunk The context from where to extract the compression parameters.
+ * @param ctx The context from where to extract the compression parameters.
  * @param cparams The pointer where the compression params will be stored.
  *
  * @return 0 if succeeds. Else a negative code is returned.
@@ -1072,7 +1136,7 @@ BLOSC_EXPORT int blosc2_ctx_get_cparams(blosc2_context *ctx, blosc2_cparams *cpa
 /**
  * @brief Create a @p dparams associated to a context.
  *
- * @param schunk The context from where to extract the decompression parameters.
+ * @param ctx The context from where to extract the decompression parameters.
  * @param dparams The pointer where the decompression params will be stored.
  *
  * @return 0 if succeeds. Else a negative code is returned.
@@ -1094,8 +1158,7 @@ BLOSC_EXPORT int blosc2_ctx_get_dparams(blosc2_context *ctx, blosc2_dparams *dpa
  *
  * @param nblocks The number of blocks in maskout above.
  *
- * @return If success, a 0 values is returned.  An error is signaled with a
- * negative int.
+ * @return If success, a 0 is returned.  An error is signaled with a negative int.
  *
  */
 BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblocks);
@@ -1128,7 +1191,7 @@ BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblo
  * must have at least the size of @p destsize.
  * @param destsize The size of the dest buffer. Blosc
  * guarantees that if you set @p destsize to, at least,
- * (@p nbytes + #BLOSC_MAX_OVERHEAD), the compression will always succeed.
+ * (@p nbytes + #BLOSC2_MAX_OVERHEAD), the compression will always succeed.
  *
  * @return The number of bytes compressed.
  * If @p src buffer cannot be compressed into @p destsize, the return
@@ -1141,7 +1204,7 @@ BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblo
  * Environment variables
  * _____________________
  *
- * *blosc_compress()* honors different environment variables to control
+ * *blosc1_compress()* honors different environment variables to control
  * internal parameters without the need of doing that programmatically.
  * Here are the ones supported:
  *
@@ -1152,30 +1215,29 @@ BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblo
  * overwrite the *doshuffle* parameter before the compression process
  * starts.
  *
- * **BLOSC_DELTA=(1|0)**: This will call *blosc_set_delta()^* before the
+ * **BLOSC_DELTA=(1|0)**: This will call *blosc2_set_delta()^* before the
  * compression process starts.
  *
  * **BLOSC_TYPESIZE=(INTEGER)**: This will overwrite the *typesize*
  * parameter before the compression process starts.
  *
  * **BLOSC_COMPRESSOR=[BLOSCLZ | LZ4 | LZ4HC | ZLIB | ZSTD]**:
- * This will call *blosc_set_compressor(BLOSC_COMPRESSOR)* before the
- * compression process starts.
+ * This will call #blosc_set_compressor before the compression process starts.
  *
  * **BLOSC_NTHREADS=(INTEGER)**: This will call
- * *blosc_set_nthreads(BLOSC_NTHREADS)* before the compression process
+ * #blosc_set_nthreads before the compression process
  * starts.
  *
  * **BLOSC_BLOCKSIZE=(INTEGER)**: This will call
- * *blosc_set_blocksize(BLOSC_BLOCKSIZE)* before the compression process
- * starts.  *NOTE:* The blocksize is a critical parameter with
+ * #blosc_set_blocksize before the compression process starts.
+ * *NOTE:* The blocksize is a critical parameter with
  * important restrictions in the allowed values, so use this with care.
  *
- * **BLOSC_NOLOCK=(ANY VALUE)**: This will call *blosc2_compress_ctx()* under
+ * **BLOSC_NOLOCK=(ANY VALUE)**: This will call #blosc2_compress_ctx under
  * the hood, with the *compressor*, *blocksize* and
  * *numinternalthreads* parameters set to the same as the last calls to
- * *blosc_set_compressor*, *blosc_set_blocksize* and
- * *blosc_set_nthreads*. *BLOSC_CLEVEL*, *BLOSC_SHUFFLE*, *BLOSC_DELTA* and
+ * #blosc1_set_compressor, #blosc1_set_blocksize and
+ * #blosc2_set_nthreads. *BLOSC_CLEVEL*, *BLOSC_SHUFFLE*, *BLOSC_DELTA* and
  * *BLOSC_TYPESIZE* environment vars will also be honored.
  *
  */
@@ -1194,7 +1256,7 @@ BLOSC_EXPORT int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
  * buffer more than what is specified in @p destsize.
  *
  * @remark In case you want to keep under control the number of bytes read from
- * source, you can call #blosc_cbuffer_sizes first to check whether the
+ * source, you can call #blosc1_cbuffer_sizes first to check whether the
  * @p nbytes (i.e. the number of bytes to be read from @p src buffer by this
  * function) in the compressed buffer is ok with you.
  *
@@ -1212,7 +1274,7 @@ BLOSC_EXPORT int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
  * Environment variables
  * _____________________
  *
- * *blosc_decompress* honors different environment variables to control
+ * *blosc1_decompress* honors different environment variables to control
  * internal parameters without the need of doing that programmatically.
  * Here are the ones supported:
  *
@@ -1222,7 +1284,7 @@ BLOSC_EXPORT int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
  *
  * **BLOSC_NOLOCK=(ANY VALUE)**: This will call *blosc2_decompress_ctx*
  * under the hood, with the *numinternalthreads* parameter set to the
- * same value as the last call to *blosc_set_nthreads*.
+ * same value as the last call to *blosc2_set_nthreads*.
  *
  */
 BLOSC_EXPORT int blosc2_decompress(const void* src, int32_t srcsize,
@@ -1230,7 +1292,7 @@ BLOSC_EXPORT int blosc2_decompress(const void* src, int32_t srcsize,
 
 /**
  * @brief Context interface to Blosc compression. This does not require a call
- * to #blosc_init and can be called from multithreaded applications
+ * to #blosc2_init and can be called from multithreaded applications
  * without the global lock being used, so allowing Blosc be executed
  * simultaneously in those scenarios.
  *
@@ -1255,7 +1317,7 @@ BLOSC_EXPORT int blosc2_compress_ctx(
 
 /**
  * @brief Context interface to Blosc decompression. This does not require a
- * call to #blosc_init and can be called from multithreaded
+ * call to #blosc2_init and can be called from multithreaded
  * applications without the global lock being used, so allowing Blosc
  * be executed simultaneously in those scenarios.
  *
@@ -1271,7 +1333,7 @@ BLOSC_EXPORT int blosc2_compress_ctx(
  * buffer more than what is specified in @p destsize.
  *
  * @remark In case you want to keep under control the number of bytes read from
- * source, you can call #blosc_cbuffer_sizes first to check the @p nbytes
+ * source, you can call #blosc1_cbuffer_sizes first to check the @p nbytes
  * (i.e. the number of bytes to be read from @p src buffer by this function)
  * in the compressed buffer.
  *
@@ -1298,7 +1360,7 @@ BLOSC_EXPORT int blosc2_decompress_ctx(blosc2_context* context, const void* src,
  * must be BLOSC_EXTENDED_HEADER_LENGTH at least.
  *
  * @return The number of bytes compressed (BLOSC_EXTENDED_HEADER_LENGTH).
- * If negative, there has been an error and @dest is unusable.
+ * If negative, there has been an error and @p dest is unusable.
  * */
 BLOSC_EXPORT int blosc2_chunk_zeros(blosc2_cparams cparams, int32_t nbytes,
                                     void* dest, int32_t destsize);
@@ -1317,7 +1379,7 @@ BLOSC_EXPORT int blosc2_chunk_zeros(blosc2_cparams cparams, int32_t nbytes,
  * @note Whether the NaNs are floats or doubles will be given by the typesize.
  *
  * @return The number of bytes compressed (BLOSC_EXTENDED_HEADER_LENGTH).
- * If negative, there has been an error and @dest is unusable.
+ * If negative, there has been an error and @p dest is unusable.
  * */
 BLOSC_EXPORT int blosc2_chunk_nans(blosc2_cparams cparams, int32_t nbytes,
                                    void* dest, int32_t destsize);
@@ -1334,7 +1396,7 @@ BLOSC_EXPORT int blosc2_chunk_nans(blosc2_cparams cparams, int32_t nbytes,
  * The size of the value is given by @p cparams.typesize param.
  *
  * @return The number of bytes compressed (BLOSC_EXTENDED_HEADER_LENGTH + typesize).
- * If negative, there has been an error and @dest is unusable.
+ * If negative, there has been an error and @p dest is unusable.
  * */
 BLOSC_EXPORT int blosc2_chunk_repeatval(blosc2_cparams cparams, int32_t nbytes,
                                         void* dest, int32_t destsize, void* repeatval);
@@ -1350,20 +1412,22 @@ BLOSC_EXPORT int blosc2_chunk_repeatval(blosc2_cparams cparams, int32_t nbytes,
  * must be BLOSC_EXTENDED_HEADER_LENGTH at least.
  *
  * @return The number of bytes compressed (BLOSC_EXTENDED_HEADER_LENGTH).
- * If negative, there has been an error and @dest is unusable.
+ * If negative, there has been an error and @p dest is unusable.
  * */
 BLOSC_EXPORT int blosc2_chunk_uninit(blosc2_cparams cparams, int32_t nbytes,
                                      void* dest, int32_t destsize);
 
 
 /**
- * @brief Context interface counterpart for #blosc_getitem.
- *
- * It uses many of the same parameters as blosc_getitem() function with
- * a few additions.
+ * @brief Context interface counterpart for #blosc1_getitem.
  *
  * @param context Context pointer.
+ * @param src The compressed buffer from data will be decompressed.
  * @param srcsize Compressed buffer length.
+ * @param start The position of the first item (of @p typesize size) from where data
+ * will be retrieved.
+ * @param nitems The number of items (of @p typesize size) that will be retrieved.
+ * @param dest The buffer where the decompressed data retrieved will be put.
  * @param destsize Output buffer length.
  *
  * @return The number of bytes copied to @p dest or a negative value if
@@ -1703,7 +1767,7 @@ BLOSC_EXPORT int blosc2_schunk_decompress_chunk(blosc2_schunk *schunk, int64_t n
  *
  * @warning If the super-chunk is backed by a frame that is disk-based, a buffer is allocated for the
  * (compressed) chunk, and hence a free is needed.
- * You can check if the chunk requires a free with the @p needs_free parameter.
+ * You can check whether the chunk requires a free with the @p needs_free parameter.
  * If the chunk does not need a free, it means that a pointer to the location in the super-chunk
  * (or the backing in-memory frame) is returned in the @p chunk parameter.
  *
@@ -1728,7 +1792,7 @@ BLOSC_EXPORT int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, 
  *
  * @warning If the super-chunk is backed by a frame that is disk-based, a buffer is allocated for the
  * (compressed) chunk, and hence a free is needed.
- * You can check if the chunk requires a free with the @p needs_free parameter.
+ * You can check whether requires a free with the @p needs_free parameter.
  * If the chunk does not need a free, it means that a pointer to the location in the super-chunk
  * (or the backing in-memory frame) is returned in the @p chunk parameter.  In this case the returned
  * chunk is not lazy.
@@ -2002,7 +2066,7 @@ BLOSC_EXPORT double blosc_elapsed_secs(blosc_timestamp_t start_time,
  *
  * @return The size in bytes of the internal block size.
  */
-BLOSC_EXPORT int blosc_get_blocksize(void);
+BLOSC_EXPORT int blosc1_get_blocksize(void);
 
 /**
  * @brief Force the use of a specific blocksize. If 0, an automatic
@@ -2011,13 +2075,29 @@ BLOSC_EXPORT int blosc_get_blocksize(void);
  * @warning The blocksize is a critical parameter with important
  * restrictions in the allowed values, so use this with care.
  */
-BLOSC_EXPORT void blosc_set_blocksize(size_t blocksize);
+BLOSC_EXPORT void blosc1_set_blocksize(size_t blocksize);
+
 
 /**
- * @brief Set pointer to super-chunk. If NULL, no super-chunk will be
- * available (the default).
+  * @brief Set the split mode.
+
+  * @param splitmode It can take the next values:
+  *  BLOSC_FORWARD_COMPAT_SPLIT
+  *  BLOSC_AUTO_SPLIT
+  *  BLOSC_NEVER_SPLIT
+  *  BLOSC_ALWAYS_SPLIT
+  *
+  * BLOSC_FORWARD_COMPAT offers reasonably forward compatibility,
+  * BLOSC_AUTO_SPLIT is for nearly optimal results (based on heuristics),
+  * BLOSC_NEVER_SPLIT and BLOSC_ALWAYS_SPLIT are for the user experimenting
+  *  when trying to get best compression ratios and/or speed.
+  *
+  * If not called, the default mode is BLOSC_FORWARD_COMPAT_SPLIT.
+  *
+  * This function should always succeed.
  */
-BLOSC_EXPORT void blosc_set_schunk(blosc2_schunk* schunk);
+BLOSC_EXPORT void blosc1_set_splitmode(int splitmode);
+
 
 /**
  * @brief Get the offsets of a frame in a super-chunk.
@@ -2131,4 +2211,4 @@ BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, c
 #endif
 
 
-#endif  /* BLOSC_H */
+#endif  /* BLOSC2_H */

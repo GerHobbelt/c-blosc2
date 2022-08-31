@@ -43,7 +43,7 @@
 
 int main(void) {
 
-  blosc_init();
+  blosc2_init();
 
   static int32_t data[CHUNKSIZE];
   static int32_t data2[CHUNKSIZE];
@@ -54,7 +54,7 @@ int main(void) {
   double ttotal;
 
   printf("Blosc version info: %s (%s)\n",
-         BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+         BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
 
   /* Create a super-chunk container */
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -175,7 +175,7 @@ int main(void) {
   if (cframe_needs_free3) {
     free(cframe3);
   }
-  blosc_destroy();
+  blosc2_destroy();
 
   return 0;
 }

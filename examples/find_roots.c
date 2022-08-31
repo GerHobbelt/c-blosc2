@@ -167,15 +167,15 @@ int compute_vectors(void) {
 
 int main(void) {
   printf("Blosc version info: %s (%s)\n",
-         BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+         BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
 
   /* Initialize the Blosc compressor */
-  blosc_init();
+  blosc2_init();
 
   compute_vectors();
 
   /* Destroy the Blosc environment */
-  blosc_destroy();
+  blosc2_destroy();
 
   return 0;
 }

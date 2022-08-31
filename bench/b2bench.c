@@ -123,8 +123,8 @@ void do_bench(char* compressor, char* shuffle, int nthreads, int size_, int elsi
     doshuffle = BLOSC_NOSHUFFLE;
   }
 
-  blosc_set_nthreads((int16_t)nthreads);
-  if (blosc_set_compressor(compressor) < 0) {
+  blosc2_set_nthreads((int16_t) nthreads);
+  if (blosc1_set_compressor(compressor) < 0) {
     printf("Compiled w/o support for compressor: '%s', so sorry.\n",
            compressor);
     exit(1);
@@ -146,7 +146,7 @@ void do_bench(char* compressor, char* shuffle, int nthreads, int size_, int elsi
   init_buffer(src, size, rshift);
   memcpy(srccpy, src, size);
   for (j = 0; j < nchunks; j++) {
-    retcode = posix_memalign(&dest[j], 32, size + BLOSC_MAX_OVERHEAD);
+    retcode = posix_memalign(&dest[j], 32, size + BLOSC2_MAX_OVERHEAD);
     if (retcode != 0) {
       printf("Error in allocating memory!");
     }
@@ -155,7 +155,7 @@ void do_bench(char* compressor, char* shuffle, int nthreads, int size_, int elsi
 
   fprintf(ofile, "--> %d, %d, %d, %d, %s, %s\n", nthreads, (int)size, elsize, rshift, compressor, shuffle);
   fprintf(ofile, "********************** Run info ******************************\n");
-  fprintf(ofile, "Blosc version: %s (%s)\n", BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+  fprintf(ofile, "Blosc version: %s (%s)\n", BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
   fprintf(ofile, "Using synthetic data with %d significant bits (out of 32)\n", rshift);
   fprintf(ofile, "Dataset size: %d bytes\tType size: %d bytes\n", (int)size, elsize);
   fprintf(ofile, "Working set: %.1f MB\t\t", (float)(size * nchunks) / (float)MB);
@@ -191,8 +191,8 @@ void do_bench(char* compressor, char* shuffle, int nthreads, int size_, int elsi
     blosc_set_timestamp(&last);
     for (i = 0; i < niter_c; i++) {
       for (j = 0; j < nchunks; j++) {
-        cbytes = blosc_compress(clevel, doshuffle, (size_t)elsize, size, src,
-                                dest[j], size + BLOSC_MAX_OVERHEAD);
+        cbytes = blosc1_compress(clevel, doshuffle, (size_t)elsize, size, src,
+                                 dest[j], size + BLOSC2_MAX_OVERHEAD);
       }
     }
     blosc_set_timestamp(&current);
@@ -220,7 +220,7 @@ void do_bench(char* compressor, char* shuffle, int nthreads, int size_, int elsi
           nbytes = (int)size;
         }
         else {
-          nbytes = blosc_decompress(dest[j], dest2, size);
+          nbytes = blosc1_decompress(dest[j], dest2, size);
         }
       }
     }
@@ -284,22 +284,22 @@ void print_compress_info(void) {
   char* name = NULL, * version = NULL;
   int ret;
 
-  printf("Blosc version: %s (%s)\n", BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+  printf("Blosc version: %s (%s)\n", BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
 
   printf("List of supported compressors in this build: %s\n",
-         blosc_list_compressors());
+         blosc2_list_compressors());
 
   printf("Supported compression libraries:\n");
-  ret = blosc_get_complib_info("blosclz", &name, &version);
+  ret = blosc2_get_complib_info("blosclz", &name, &version);
   if (ret >= 0) printf("  %s: %s\n", name, version);
   free(name); free(version);
-  ret = blosc_get_complib_info("lz4", &name, &version);
+  ret = blosc2_get_complib_info("lz4", &name, &version);
   if (ret >= 0) printf("  %s: %s\n", name, version);
   free(name); free(version);
-  ret = blosc_get_complib_info("zlib", &name, &version);
+  ret = blosc2_get_complib_info("zlib", &name, &version);
   if (ret >= 0) printf("  %s: %s\n", name, version);
   free(name); free(version);
-  ret = blosc_get_complib_info("zstd", &name, &version);
+  ret = blosc2_get_complib_info("zstd", &name, &version);
   if (ret >= 0) printf("  %s: %s\n", name, version);
   free(name); free(version);
 }
@@ -440,7 +440,7 @@ int main(int argc, char* argv[]) {
   nchunks = get_nchunks(size, workingset);
   blosc_set_timestamp(&last);
 
-  blosc_init();
+  blosc2_init();
 
   if (suite) {
     for (nthreads_ = 1; nthreads_ <= nthreads; nthreads_++) {
@@ -521,7 +521,7 @@ int main(int argc, char* argv[]) {
          totaltime, totalsize * 2 * 1.1 / (MB * totaltime));
 
   /* Free blosc resources */
-  blosc_free_resources();
-  blosc_destroy();
+  blosc2_free_resources();
+  blosc2_destroy();
   return 0;
 }

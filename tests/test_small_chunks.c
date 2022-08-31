@@ -13,7 +13,7 @@ CUTEST_TEST_DATA(small_chunks) {
 
 CUTEST_TEST_SETUP(small_chunks) {
   BLOSC_UNUSED_PARAM(data);
-  blosc_init();
+  blosc2_init();
 }
 
 
@@ -37,7 +37,7 @@ CUTEST_TEST_TEST(small_chunks) {
     storage.contiguous = false;
     blosc2_schunk *sc = blosc2_schunk_new(&storage);
 
-    int32_t chunk_nbytes = itemsize + BLOSC_MAX_OVERHEAD;
+    int32_t chunk_nbytes = itemsize + BLOSC2_MAX_OVERHEAD;
     uint8_t *chunk = malloc(chunk_nbytes);
     int64_t rep_val = 8;
     blosc2_chunk_repeatval(cparams, chunksize, chunk, chunk_nbytes, &rep_val);
@@ -54,7 +54,7 @@ CUTEST_TEST_TEST(small_chunks) {
       return BLOSC2_ERROR_FAILURE;
     }
     CUTEST_ASSERT("Can not get chunk", rc >= 0);
-    
+
     if (needs_free) {
       free(chunk);
     }
@@ -63,7 +63,7 @@ CUTEST_TEST_TEST(small_chunks) {
 
     blosc2_remove_dir("ex_update.caterva");
 
-    blosc_destroy();
+  blosc2_destroy();
 
     return 0;
 
@@ -71,7 +71,7 @@ CUTEST_TEST_TEST(small_chunks) {
 
 CUTEST_TEST_TEARDOWN(small_chunks) {
   BLOSC_UNUSED_PARAM(data);
-  blosc_destroy();
+  blosc2_destroy();
 }
 
 

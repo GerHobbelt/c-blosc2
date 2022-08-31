@@ -25,7 +25,7 @@ static char* test_lazy_chunk_memcpyed(void) {
 
   uint8_t buffer_b[] = {1};
 
-  int32_t chunk_size = sc->typesize + BLOSC_MAX_OVERHEAD;
+  int32_t chunk_size = sc->typesize + BLOSC2_MAX_OVERHEAD;
   uint8_t *chunk = malloc(chunk_size);
   cbytes = blosc2_compress_ctx(sc->cctx, buffer_b, sc->typesize, chunk, chunk_size);
   mu_assert("ERROR: cbytes are incorrect", cbytes == 33);
@@ -63,7 +63,7 @@ int main(void) {
   char *result;
 
   install_blosc_callback_test(); /* optionally install callback test */
-  blosc_init();
+  blosc2_init();
 
   /* Run all the suite */
   result = all_tests();
@@ -75,7 +75,7 @@ int main(void) {
   }
   printf("\tTests run: %d\n", tests_run);
 
-  blosc_destroy();
+  blosc2_destroy();
 
   return result != EXIT_SUCCESS;
 }

@@ -24,11 +24,11 @@ int main(void) {
   int64_t nchunks;
 
   printf("Blosc version info: %s (%s)\n",
-         BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+         BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
 
   /* Initialize the Blosc compressor */
   install_blosc_callback_test(); /* optionally install callback test */
-  blosc_init();
+  blosc2_init();
 
   /* Create a super-chunk container */
   cparams.filters[0] = BLOSC_DELTA;
@@ -82,7 +82,7 @@ int main(void) {
   /* Free resources */
   blosc2_schunk_free(schunk);
   /* Destroy the Blosc environment */
-  blosc_destroy();
+  blosc2_destroy();
 
   free(data);
   free(data_dest);

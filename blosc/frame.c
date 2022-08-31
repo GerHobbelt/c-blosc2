@@ -944,11 +944,11 @@ int64_t frame_from_schunk(blosc2_schunk *schunk, blosc2_frame_s *frame) {
   uint8_t *off_chunk = NULL;
   if (nchunks > 0) {
     // Compress the chunk of offsets
-    off_chunk = malloc(off_nbytes + BLOSC_MAX_OVERHEAD);
+    off_chunk = malloc(off_nbytes + BLOSC2_MAX_OVERHEAD);
     blosc2_context *cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
     cctx->typesize = sizeof(int64_t);
     off_cbytes = blosc2_compress_ctx(cctx, data_tmp, off_nbytes, off_chunk,
-                                     off_nbytes + BLOSC_MAX_OVERHEAD);
+                                     off_nbytes + BLOSC2_MAX_OVERHEAD);
     blosc2_free_ctx(cctx);
     if (off_cbytes < 0) {
       free(off_chunk);
@@ -1705,9 +1705,9 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy, const blosc2_io
 
   // We are not attached to a frame anymore
   schunk->frame = NULL;
-  frame->schunk = NULL;
 
   if (nchunks == 0) {
+    frame->schunk = NULL;
     goto out;
   }
 
@@ -1768,8 +1768,18 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy, const blosc2_io
   schunk->data = malloc(nchunks * sizeof(void*));
   for (int i = 0; i < nchunks; i++) {
     if (frame->cframe != NULL) {
-      data_chunk = frame->cframe + header_len + offsets[i];
-      needs_free = false;
+      if (needs_free) {
+        free(data_chunk);
+      }
+      if (offsets[i] < 0) {
+        int64_t rbytes = frame_get_lazychunk(frame, offsets[i], &data_chunk, &needs_free);
+        if (rbytes < 0) {
+          break;
+        }
+      }
+      else {
+       data_chunk = frame->cframe + header_len + offsets[i];
+      }
       rc = blosc2_cbuffer_sizes(data_chunk, NULL, &chunk_cbytes, NULL);
       if (rc < 0) {
         break;
@@ -1782,6 +1792,9 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy, const blosc2_io
           free(data_chunk);
         }
         rbytes = frame_get_lazychunk(frame, offsets[i], &data_chunk, &needs_free);
+        if (rbytes < 0) {
+          break;
+        }
       }
       else {
         io_cb->seek(fp, frame->file_offset + header_len + offsets[i], SEEK_SET);
@@ -1826,6 +1839,9 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy, const blosc2_io
     }
   }
 
+  // We are not attached to a schunk anymore
+  frame->schunk = NULL;
+
   end:
   if (needs_free) {
     free(data_chunk);
@@ -1837,11 +1853,19 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy, const blosc2_io
   }
   free(offsets);
 
-  if (rc < 0 || acc_nbytes != nbytes || acc_cbytes != cbytes) {
+  // cframes and sframes have different ways to store chunks with special values:
+  // 1) cframes represent special chunks as negative offsets
+  // 2) sframes does not have the concept of offsets, but rather of data pointers (.data)
+  //    so they always have a pointer to a special chunk
+  // This is why cframes and sframes have different cbytes and hence, we cannot enforce acc_bytes == schunk->cbytes
+  // In the future, maybe we could provide special meanings for .data[i] > 0x7FFFFFFF, but not there yet
+  // if (rc < 0 || acc_nbytes != nbytes || acc_cbytes != cbytes) {
+  if (rc < 0 || acc_nbytes != nbytes) {
     blosc2_schunk_free(schunk);
     return NULL;
   }
-
+  // Update counters
+  schunk->cbytes = acc_cbytes;
   schunk->blocksize = blocksize;
 
   out:
@@ -2576,9 +2600,9 @@ void* frame_append_chunk(blosc2_frame_s* frame, void* chunk, blosc2_schunk* schu
   cparams.nthreads = 4;  // 4 threads seems a decent default for nowadays CPUs
   cparams.compcode = BLOSC_BLOSCLZ;
   blosc2_context* cctx = blosc2_create_cctx(cparams);
-  void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
+  void* off_chunk = malloc((size_t)off_nbytes + BLOSC2_MAX_OVERHEAD);
   int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes,
-                                               off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
+                                               off_chunk, off_nbytes + BLOSC2_MAX_OVERHEAD);
   blosc2_free_ctx(cctx);
   free(offsets);
   if (new_off_cbytes < 0) {
@@ -2776,9 +2800,9 @@ void* frame_insert_chunk(blosc2_frame_s* frame, int64_t nchunk, void* chunk, blo
   cparams.nthreads = 4;  // 4 threads seems a decent default for nowadays CPUs
   cparams.compcode = BLOSC_BLOSCLZ;
   blosc2_context* cctx = blosc2_create_cctx(cparams);
-  void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
+  void* off_chunk = malloc((size_t)off_nbytes + BLOSC2_MAX_OVERHEAD);
   int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes,
-                                               off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
+                                               off_chunk, off_nbytes + BLOSC2_MAX_OVERHEAD);
   blosc2_free_ctx(cctx);
 
   free(offsets);
@@ -2948,7 +2972,7 @@ void* frame_update_chunk(blosc2_frame_s* frame, int64_t nchunk, void* chunk, blo
     }
     else {
       cbytes_old = sw32_(chunk_old + BLOSC2_CHUNK_CBYTES);
-      if (cbytes_old == BLOSC_MAX_OVERHEAD) {
+      if (cbytes_old == BLOSC2_MAX_OVERHEAD) {
         cbytes_old = 0;
       }
     }
@@ -3018,9 +3042,9 @@ void* frame_update_chunk(blosc2_frame_s* frame, int64_t nchunk, void* chunk, blo
   cparams.nthreads = 4;  // 4 threads seems a decent default for nowadays CPUs
   cparams.compcode = BLOSC_BLOSCLZ;
   blosc2_context* cctx = blosc2_create_cctx(cparams);
-  void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
+  void* off_chunk = malloc((size_t)off_nbytes + BLOSC2_MAX_OVERHEAD);
   int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes,
-                                               off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
+                                               off_chunk, off_nbytes + BLOSC2_MAX_OVERHEAD);
   blosc2_free_ctx(cctx);
 
   free(offsets);
@@ -3172,9 +3196,9 @@ void* frame_delete_chunk(blosc2_frame_s* frame, int64_t nchunk, blosc2_schunk* s
   cparams.nthreads = 4;  // 4 threads seems a decent default for nowadays CPUs
   cparams.compcode = BLOSC_BLOSCLZ;
   blosc2_context* cctx = blosc2_create_cctx(cparams);
-  void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
+  void* off_chunk = malloc((size_t)off_nbytes + BLOSC2_MAX_OVERHEAD);
   int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes - (int32_t)sizeof(int64_t),
-                                               off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
+                                               off_chunk, off_nbytes + BLOSC2_MAX_OVERHEAD);
   blosc2_free_ctx(cctx);
 
   free(offsets);
@@ -3325,9 +3349,9 @@ int frame_reorder_offsets(blosc2_frame_s* frame, const int64_t* offsets_order, b
   cparams.nthreads = 4;  // 4 threads seems a decent default for nowadays CPUs
   cparams.compcode = BLOSC_BLOSCLZ;
   blosc2_context* cctx = blosc2_create_cctx(cparams);
-  void* off_chunk = malloc((size_t)off_nbytes + BLOSC_MAX_OVERHEAD);
+  void* off_chunk = malloc((size_t)off_nbytes + BLOSC2_MAX_OVERHEAD);
   int32_t new_off_cbytes = blosc2_compress_ctx(cctx, offsets, off_nbytes,
-                                               off_chunk, off_nbytes + BLOSC_MAX_OVERHEAD);
+                                               off_chunk, off_nbytes + BLOSC2_MAX_OVERHEAD);
   blosc2_free_ctx(cctx);
 
   if (new_off_cbytes < 0) {

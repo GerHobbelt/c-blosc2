@@ -65,7 +65,7 @@ void test_update(blosc2_schunk* schunk_sframe, blosc2_schunk* schunk_cframe) {
   sframe_update_time = 0.0;
   cframe_update_time = 0.0;
   int32_t datasize = sizeof(int32_t) * CHUNKSIZE;
-  int32_t chunksize = sizeof(int32_t) * CHUNKSIZE + BLOSC_MAX_OVERHEAD;
+  int32_t chunksize = sizeof(int32_t) * CHUNKSIZE + BLOSC2_MAX_OVERHEAD;
   uint8_t* chunk;
   int csize;
   int64_t _nchunks;
@@ -131,7 +131,7 @@ void test_insert(blosc2_schunk* schunk_sframe, blosc2_schunk* schunk_cframe) {
   sframe_insert_time = 0.0;
   cframe_insert_time = 0.0;
   int32_t datasize = sizeof(int32_t) * CHUNKSIZE;
-  int32_t chunksize = sizeof(int32_t) * CHUNKSIZE + BLOSC_MAX_OVERHEAD;
+  int32_t chunksize = sizeof(int32_t) * CHUNKSIZE + BLOSC2_MAX_OVERHEAD;
   uint8_t* chunk;
   int csize;
   int64_t _nchunks;
@@ -235,7 +235,7 @@ void test_create_sframe_frame(char* operation) {
   blosc2_schunk* schunk_cframe;
 
   /* Initialize the Blosc compressor */
-  blosc_init();
+  blosc2_init();
   printf("*******************************************************\n");
   printf("***** Creating the frame and sframe with %d chunks ****\n", nchunks);
   printf("*******************************************************\n");
@@ -343,7 +343,7 @@ if (operation != NULL) {
   blosc2_schunk_free(schunk_sframe);
   blosc2_schunk_free(schunk_cframe);
   /* Destroy the Blosc environment */
-  blosc_destroy();
+  blosc2_destroy();
 
 }
 

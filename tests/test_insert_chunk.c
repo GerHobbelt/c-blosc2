@@ -72,7 +72,7 @@ static char* test_insert_chunk(void) {
   blosc2_schunk* schunk;
 
   /* Initialize the Blosc compressor */
-  blosc_init();
+  blosc2_init();
 
   /* Create a super-chunk container */
   cparams.typesize = sizeof(int64_t);
@@ -106,7 +106,7 @@ static char* test_insert_chunk(void) {
       data[j] = i - 1;
     }
     int32_t datasize = sizeof(int64_t) * CHUNKSIZE;
-    int32_t chunksize = sizeof(int64_t) * CHUNKSIZE + BLOSC_MAX_OVERHEAD;
+    int32_t chunksize = sizeof(int64_t) * CHUNKSIZE + BLOSC2_MAX_OVERHEAD;
     uint8_t *chunk = malloc(chunksize);
     int csize = blosc2_compress_ctx(schunk->cctx, data, datasize, chunk, chunksize);
     mu_assert("ERROR: chunk cannot be compressed", csize >= 0);
@@ -160,7 +160,7 @@ static char* test_insert_chunk(void) {
   }
   blosc2_schunk_free(schunk);
   /* Destroy the Blosc environment */
-  blosc_destroy();
+  blosc2_destroy();
 
   free(data);
   free(data_dest);
@@ -192,7 +192,7 @@ int main(void) {
   char *result;
 
   install_blosc_callback_test(); /* optionally install callback test */
-  blosc_init();
+  blosc2_init();
 
   /* Run all the suite */
   result = all_tests();
@@ -204,7 +204,7 @@ int main(void) {
   }
   printf("\tTests run: %d\n", tests_run);
 
-  blosc_destroy();
+  blosc2_destroy();
 
   return result != EXIT_SUCCESS;
 }

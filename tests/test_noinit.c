@@ -8,7 +8,7 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-/* Test for using blosc without blosc_init() and blosc_destroy() */
+/* Test for using blosc without blosc2_init() and blosc2_destroy() */
 
 #include "config.h"
 
@@ -33,8 +33,8 @@ size_t size = 4 * 1000 * 1000;             /* must be divisible by 4 */
 static char *test_compress(void) {
 
   /* Get a compressed buffer */
-  cbytes = blosc_compress(clevel, doshuffle, typesize, size, src,
-                          dest, size + BLOSC_MAX_OVERHEAD);
+  cbytes = blosc1_compress(clevel, doshuffle, typesize, size, src,
+                           dest, size + BLOSC2_MAX_OVERHEAD);
   mu_assert("ERROR: cbytes is not correct", cbytes < (int)size);
 
   return 0;
@@ -45,12 +45,12 @@ static char *test_compress(void) {
 static char *test_compress_decompress(void) {
 
   /* Get a compressed buffer */
-  cbytes = blosc_compress(clevel, doshuffle, typesize, size, src,
-                          dest, size + BLOSC_MAX_OVERHEAD);
+  cbytes = blosc1_compress(clevel, doshuffle, typesize, size, src,
+                           dest, size + BLOSC2_MAX_OVERHEAD);
   mu_assert("ERROR: cbytes is not correct", cbytes < (int)size);
 
   /* Decompress the buffer */
-  nbytes = blosc_decompress(dest, dest2, size);
+  nbytes = blosc1_decompress(dest, dest2, size);
   mu_assert("ERROR: nbytes incorrect(1)", nbytes == (int)size);
 
   return 0;
@@ -78,12 +78,12 @@ int main(void) {
     assert(pid >= 0);
   }
 
-  blosc_set_nthreads(4);
+  blosc2_set_nthreads(4);
 
   /* Initialize buffers */
   src = blosc_test_malloc(BUFFER_ALIGN_SIZE, size);
   srccpy = blosc_test_malloc(BUFFER_ALIGN_SIZE, size);
-  dest = blosc_test_malloc(BUFFER_ALIGN_SIZE, size + BLOSC_MAX_OVERHEAD);
+  dest = blosc_test_malloc(BUFFER_ALIGN_SIZE, size + BLOSC2_MAX_OVERHEAD);
   dest2 = blosc_test_malloc(BUFFER_ALIGN_SIZE, size);
   _src = (int32_t *)src;
   for (i=0; i < (int)(size/4); i++) {

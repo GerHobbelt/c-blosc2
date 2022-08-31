@@ -37,8 +37,8 @@ size_t size = sizeof(int32_t) * 1000 * 1000;
 static char *test_compress(void) {
 
   /* Get a compressed buffer */
-  cbytes = blosc_compress(clevel, doshuffle, typesize, size, src,
-                          dest, size + BLOSC_MAX_OVERHEAD);
+  cbytes = blosc1_compress(clevel, doshuffle, typesize, size, src,
+                           dest, size + BLOSC2_MAX_OVERHEAD);
   mu_assert("ERROR: cbytes is not correct", cbytes < (int)size);
 
   return 0;
@@ -49,12 +49,12 @@ static char *test_compress(void) {
 static char *test_compress_decompress(void) {
 
   /* Get a compressed buffer */
-  cbytes = blosc_compress(clevel, doshuffle, typesize, size, src,
-                          dest, size + BLOSC_MAX_OVERHEAD);
+  cbytes = blosc1_compress(clevel, doshuffle, typesize, size, src,
+                           dest, size + BLOSC2_MAX_OVERHEAD);
   mu_assert("ERROR: cbytes is not correct", cbytes < (int)size);
 
   /* Decompress the buffer */
-  nbytes = blosc_decompress(dest, dest2, size);
+  nbytes = blosc1_decompress(dest, dest2, size);
   mu_assert("ERROR: nbytes incorrect(1)", nbytes == (int)size);
 
   return 0;
@@ -79,16 +79,18 @@ int main(void) {
   /* Launch several subprocesses */
   for (int i = 1; i <= NCHILDREN; i++) {
     int pid = fork();
-    assert(pid >= 0);
+    if (pid < 0) {
+      return -1;
+    }
   }
 
-  blosc_init();
-  blosc_set_nthreads(NTHREADS);
+  blosc2_init();
+  blosc2_set_nthreads(NTHREADS);
 
   /* Initialize buffers */
   src = blosc_test_malloc(BUFFER_ALIGN_SIZE, size);
   srccpy = blosc_test_malloc(BUFFER_ALIGN_SIZE, size);
-  dest = blosc_test_malloc(BUFFER_ALIGN_SIZE, size + BLOSC_MAX_OVERHEAD);
+  dest = blosc_test_malloc(BUFFER_ALIGN_SIZE, size + BLOSC2_MAX_OVERHEAD);
   dest2 = blosc_test_malloc(BUFFER_ALIGN_SIZE, size);
   _src = (int32_t *)src;
   for (int i = 0; i < (int)(size / sizeof(int32_t)); i++) {
@@ -111,7 +113,7 @@ int main(void) {
   blosc_test_free(dest);
   blosc_test_free(dest2);
 
-  blosc_destroy();
+  blosc2_destroy();
 
   /* Reset envvar */
   unsetenv("BLOSC_NOLOCK");

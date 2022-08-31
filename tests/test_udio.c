@@ -86,7 +86,7 @@ CUTEST_TEST_DATA(udio) {
 };
 
 CUTEST_TEST_SETUP(udio) {
-  blosc_init();
+  blosc2_init();
 
   blosc2_io_cb io_cb;
 
@@ -171,7 +171,7 @@ CUTEST_TEST_TEST(udio) {
 
 CUTEST_TEST_TEARDOWN(udio) {
   BLOSC_UNUSED_PARAM(data);
-  blosc_destroy();
+  blosc2_destroy();
 }
 
 

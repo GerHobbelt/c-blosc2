@@ -33,7 +33,7 @@
 
 
 int main(void) {
-  blosc_init();
+  blosc2_init();
 
   static int32_t data[CHUNKSIZE];
   static int32_t data_dest[CHUNKSIZE];
@@ -41,7 +41,7 @@ int main(void) {
   blosc_timestamp_t last, current;
 
   printf("Blosc version info: %s (%s)\n",
-         BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+         BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
 
   // Compression and decompression parameters
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -64,7 +64,10 @@ int main(void) {
       data[i] = i * nchunk;
     }
     int64_t nchunks = blosc2_schunk_append_buffer(schunk, data, isize);
-    assert(nchunks == nchunk + 1);
+    if (nchunks != nchunk + 1) {
+      printf("Error: nchunks is not correct");
+      return -1;
+    }
   }
   /* Gather some info */
   int64_t nbytes = schunk->nbytes;
@@ -94,7 +97,7 @@ int main(void) {
   /* Free resources */
   blosc2_schunk_free(schunk);
 
-  blosc_destroy();
+  blosc2_destroy();
 
   return 0;
 }

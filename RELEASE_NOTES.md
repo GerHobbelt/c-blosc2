@@ -1,5 +1,54 @@
-Release notes for C-Blosc2 2.2.0
+Release notes for C-Blosc2 2.3.0
 ================================
+
+Changes from 2.2.0 to 2.3.0
+===========================
+
+* [API change] In order to allow to compile with both C-Blosc and C-Blosc2 libraries, a new API has been created for the symbols and function names that had collisions.  Here are the changed symbols and functions:
+
+  * Blosc2 symbols that take different values than in Blosc1:
+    - BLOSC_VERSION_MAJOR -> BLOSC2_VERSION_MAJOR
+    - BLOSC_VERSION_MINOR -> BLOSC2_VERSION_MINOR
+    - BLOSC_VERSION_RELEASE -> BLOSC2_VERSION_RELEASE
+    - BLOSC_VERSION_STRING -> BLOSC2_VERSION_STRING
+    - BLOSC_VERSION_DATE -> BLOSC2_VERSION_DATE
+    - BLOSC_MAX_OVERHEAD -> BLOSC2_MAX_OVERHEAD
+    - BLOSC_MAX_BUFFERSIZE -> BLOSC2_MAX_BUFFERSIZE
+
+  * Original Blosc1 API that takes the `blosc1_` prefix:
+    - blosc_compress -> blosc1_compress
+    - blosc_decompress -> blosc1_decompress
+    - blosc_getitem -> blosc1_getitem
+    - blosc_get_compressor -> blosc1_get_compressor
+    - blosc_set_compressor -> blosc_set_compressor
+    - blosc_cbuffer_sizes -> blosc1_cbuffer_sizes
+    - blosc_cbuffer_validate -> blosc1_cbuffer_validate
+    - blosc_cbuffer_metainfo -> blosc1_cbuffer_metainfo
+    - blosc_get_blocksize -> blosc1_get_blocksize
+    - blosc_set_blocksize -> blosc1_set_blocksize
+    - blosc_set_splitmode -> blosc1_set_splitmode
+
+  * API that has been migrated to blosc2_ prefix
+    - blosc_init -> blosc2_init
+    - blosc_destroy -> blosc2_destroy
+    - blosc_free_resources -> blosc2_free_resources
+    - blosc_get_nthreads -> blosc2_get_nthreads
+    - blosc_set_nthreads -> blosc2_set_nthreads
+    - blosc_compcode_to_compname -> blosc2_compcode_to_compname
+    - blosc_compname_to_compcode -> blosc2_compname_to_compcode
+    - blosc_list_compressors -> blosc2_list_compressors
+    - blosc_get_version_string -> blosc2_get_version_string
+    - blosc_get_complib_info -> blosc2_get_complib_info
+    - blosc_cbuffer_versions -> blosc2_cbuffer_versions
+    - blosc_cbuffer_complib -> blosc2_cbuffer_complib
+
+  It is recommended to migrate to the new API as soon as possible.  In the meanwhile, you can still compile with the previous API (corresponding to C-Blosc2 pre-2.3.0), by defining the `BLOSC1_COMPAT` symbol in your C-Blosc2 app (before including the 'blosc2.h' header).
+
+* Fixed some issues in converting from super-chunks to frames and back.  Now it is possible to do a rountrip without (known) problems.
+
+* LZ4 codec has been bumped to 1.9.4.
+
+
 
 Changes from 2.1.1 to 2.2.0
 ===========================
@@ -223,7 +272,7 @@ Changes from 2.0.0-beta.3 to 2.0.0-beta.4
 
 * New pluggable threading backend.  Instead of having Blosc use its own
   thread pool, you can instead call
-  `blosc_set_threads_callback(threads_callback, callback_data)` to install
+  `blosc2_set_threads_callback(threads_callback, callback_data)` to install
   your own threading backend.  This gives Blosc the possibility to use the
   same threading mechanism as one you are using in the rest of your program
   (e.g. OpenMP or Intel TBB), sharing the same threads, rather than starting
@@ -357,9 +406,9 @@ Changes from 2.0.0a3 to 2.0.0a4
   and also more speed (at least on modern Intel/AMD CPUs).  Version
   for internal BloscLZ codec bumped to 1.0.6.
 
-- Internal zstd sources bumbed to 1.3.0.
+- Internal zstd sources bumped to 1.3.0.
 
-- The BLOSC_MAX_OVERHEAD symbol is always 32 bytes, not 16 as in Blosc1.
+- The BLOSC2_MAX_OVERHEAD symbol is always 32 bytes, not 16 as in Blosc1.
   This is needed in order to allow buffers larger than 32 bits (31 actually :).
 
 

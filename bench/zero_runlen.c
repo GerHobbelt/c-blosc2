@@ -37,7 +37,7 @@ enum {
 int check_special_values(int svalue) {
   blosc2_schunk *schunk;
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
-  int32_t osize = CHUNKSIZE * sizeof(int32_t) + BLOSC_MAX_OVERHEAD;
+  int32_t osize = CHUNKSIZE * sizeof(int32_t) + BLOSC2_MAX_OVERHEAD;
   int dsize, csize;
   int64_t nbytes, frame_len;
   int nchunk;
@@ -52,7 +52,7 @@ int check_special_values(int svalue) {
   int32_t *rec_buffer = malloc(CHUNKSIZE * sizeof(int32_t));
 
   /* Initialize the Blosc compressor */
-  blosc_init();
+  blosc2_init();
 
   /* Create a super-chunk container */
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -144,7 +144,7 @@ int check_special_values(int svalue) {
     }
     switch (svalue) {
       case CHECK_VALUES:
-        rc = blosc_getitem(chunk_, nchunk, 1, &value);
+        rc = blosc1_getitem(chunk_, nchunk, 1, &value);
         if (rc < 0) {
           printf("Error in getitem of a special value\n");
           return rc;
@@ -155,7 +155,7 @@ int check_special_values(int svalue) {
         }
         break;
       case CHECK_NANS:
-        rc = blosc_getitem(chunk_, nchunk, 1, &fvalue);
+        rc = blosc1_getitem(chunk_, nchunk, 1, &fvalue);
         if (rc < 0) {
           printf("Error in getitem of a special value\n");
           return rc;
@@ -166,7 +166,7 @@ int check_special_values(int svalue) {
         }
         break;
       case CHECK_ZEROS:
-        rc = blosc_getitem(chunk_, nchunk, 1, &value);
+        rc = blosc1_getitem(chunk_, nchunk, 1, &value);
         if (rc < 0) {
           printf("Error in getitem of zeros value\n");
           return rc;
@@ -178,7 +178,7 @@ int check_special_values(int svalue) {
         break;
       default:
         // It can only be non-initialized
-        rc = blosc_getitem(chunk_, nchunk, 1, &value);
+        rc = blosc1_getitem(chunk_, nchunk, 1, &value);
         if (rc < 0) {
           printf("Error in getitem of an non-initialized value\n");
           return rc;
@@ -237,7 +237,7 @@ int check_special_values(int svalue) {
   /* Destroy the super-chunk */
   blosc2_schunk_free(schunk);
   /* Destroy the Blosc environment */
-  blosc_destroy();
+  blosc2_destroy();
 
   return 0;
 }

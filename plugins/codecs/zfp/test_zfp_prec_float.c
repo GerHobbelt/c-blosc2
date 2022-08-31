@@ -35,7 +35,7 @@ static int test_zfp_prec_float(blosc2_schunk* schunk) {
     int64_t csize;
     int64_t dsize;
     int64_t csize_f = 0;
-    uint8_t *data_out = malloc(chunksize + BLOSC_MAX_OVERHEAD);
+    uint8_t *data_out = malloc(chunksize + BLOSC2_MAX_OVERHEAD);
     float *data_dest = malloc(chunksize);
 
     /* Create a context for compression */
@@ -68,7 +68,7 @@ static int test_zfp_prec_float(blosc2_schunk* schunk) {
         }
 
         /* Compress with clevel=5 and shuffle active  */
-        csize = blosc2_compress_ctx(cctx, data_in, chunksize, data_out, chunksize + BLOSC_MAX_OVERHEAD);
+        csize = blosc2_compress_ctx(cctx, data_in, chunksize, data_out, chunksize + BLOSC2_MAX_OVERHEAD);
         if (csize == 0) {
             printf("Buffer is uncompressible.  Giving up.\n");
             return 0;
@@ -80,7 +80,7 @@ static int test_zfp_prec_float(blosc2_schunk* schunk) {
 
 
         /* Decompress  */
-        dsize = blosc2_decompress_ctx(dctx, data_out, chunksize + BLOSC_MAX_OVERHEAD, data_dest, chunksize);
+        dsize = blosc2_decompress_ctx(dctx, data_out, chunksize + BLOSC2_MAX_OVERHEAD, data_dest, chunksize);
         if (dsize <= 0) {
             printf("Decompression error.  Error code: %" PRId64 "\n", dsize);
             return (int) dsize;
@@ -108,7 +108,7 @@ static int test_zfp_prec_float(blosc2_schunk* schunk) {
     blosc2_free_ctx(cctx);
     blosc2_free_ctx(dctx);
 
-    printf("Succesful roundtrip!\n");
+    printf("Successful roundtrip!\n");
     printf("Compression: %d -> %" PRId64 " (%.1fx)\n", chunksize, csize_f, (1. * chunksize) / (double) csize_f);
     return (int) (chunksize - csize_f);
 }
@@ -126,7 +126,7 @@ static int test_zfp_prec_double(blosc2_schunk* schunk) {
     int64_t csize;
     int64_t dsize;
     int64_t csize_f = 0;
-    uint8_t *data_out = malloc(chunksize + BLOSC_MAX_OVERHEAD);
+    uint8_t *data_out = malloc(chunksize + BLOSC2_MAX_OVERHEAD);
     double *data_dest = malloc(chunksize);
 
     /* Create a context for compression */
@@ -159,7 +159,7 @@ static int test_zfp_prec_double(blosc2_schunk* schunk) {
         }
 
         /* Compress with clevel=5 and shuffle active  */
-        csize = blosc2_compress_ctx(cctx, data_in, chunksize, data_out, chunksize + BLOSC_MAX_OVERHEAD);
+        csize = blosc2_compress_ctx(cctx, data_in, chunksize, data_out, chunksize + BLOSC2_MAX_OVERHEAD);
         if (csize == 0) {
             printf("Buffer is uncompressible.  Giving up.\n");
             return 0;
@@ -171,7 +171,7 @@ static int test_zfp_prec_double(blosc2_schunk* schunk) {
 
 
         /* Decompress  */
-        dsize = blosc2_decompress_ctx(dctx, data_out, chunksize + BLOSC_MAX_OVERHEAD, data_dest, chunksize);
+        dsize = blosc2_decompress_ctx(dctx, data_out, chunksize + BLOSC2_MAX_OVERHEAD, data_dest, chunksize);
         if (dsize <= 0) {
             printf("Decompression error.  Error code: %" PRId64 "\n", dsize);
             return (int) dsize;
@@ -199,7 +199,7 @@ static int test_zfp_prec_double(blosc2_schunk* schunk) {
     blosc2_free_ctx(cctx);
     blosc2_free_ctx(dctx);
 
-    printf("Succesful roundtrip!\n");
+    printf("Successful roundtrip!\n");
     printf("Compression: %d -> %" PRId64 " (%.1fx)\n", chunksize, csize_f, (1. * chunksize) / (double) csize_f);
     return (int) (chunksize - csize_f);
 }
@@ -249,7 +249,7 @@ int item_prices() {
 int main(void) {
 
     int result;
-    blosc_init();   // this is mandatory for initiallizing the plugin mechanism
+  blosc2_init();   // this is mandatory for initiallizing the plugin mechanism
     result = float_cyclic();
     printf("float_cyclic: %d obtained \n \n", result);
     result = double_same_cells();
@@ -258,7 +258,7 @@ int main(void) {
     printf("day_month_temp: %d obtained \n \n", result);
     result = item_prices();
     printf("item_prices: %d obtained \n \n", result);
-    blosc_destroy();
+  blosc2_destroy();
 
     return BLOSC2_ERROR_SUCCESS;
 }

@@ -28,10 +28,10 @@
 
 
 int main(void) {
-  blosc_init();
+  blosc2_init();
 
   printf("Blosc version info: %s (%s)\n",
-         BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+         BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
 
   /* Create a super-chunk container */
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -98,7 +98,7 @@ int main(void) {
   /* Free resources */
   blosc2_schunk_free(schunk);
   blosc2_schunk_free(sc);
-  blosc_destroy();
+  blosc2_destroy();
 
   return 0;
 }

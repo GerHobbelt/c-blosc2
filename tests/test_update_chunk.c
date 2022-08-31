@@ -100,7 +100,7 @@ static char* test_update_chunk(void) {
     }
 
     int32_t datasize = sizeof(int64_t) * CHUNKSIZE;
-    int32_t chunksize = sizeof(int64_t) * CHUNKSIZE + BLOSC_MAX_OVERHEAD;
+    int32_t chunksize = sizeof(int64_t) * CHUNKSIZE + BLOSC2_MAX_OVERHEAD;
     uint8_t *chunk = malloc(chunksize);
     int csize = blosc2_compress_ctx(schunk->cctx, data, datasize, chunk, chunksize);
     mu_assert("ERROR: chunk cannot be compressed", csize >= 0);
@@ -170,7 +170,7 @@ int main(void) {
   char *result;
 
   install_blosc_callback_test(); /* optionally install callback test */
-  blosc_init();
+  blosc2_init();
 
   data = blosc_test_malloc(BUFFER_ALIGN_SIZE, CHUNKSIZE * sizeof(int64_t));
   data_dest = blosc_test_malloc(BUFFER_ALIGN_SIZE, CHUNKSIZE * sizeof(int64_t));
@@ -188,7 +188,7 @@ int main(void) {
   blosc_test_free(data);
   blosc_test_free(data_dest);
 
-  blosc_destroy();
+  blosc2_destroy();
 
   return result != EXIT_SUCCESS;
 }

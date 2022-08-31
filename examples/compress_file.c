@@ -30,7 +30,7 @@
 
 
 int main(int argc, char* argv[]) {
-  blosc_init();
+  blosc2_init();
   static int32_t data[CHUNKSIZE];
   int32_t isize;
   int64_t nbytes, cbytes;
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   }
 
   printf("Blosc version info: %s (%s)\n",
-         BLOSC_VERSION_STRING, BLOSC_VERSION_DATE);
+         BLOSC2_VERSION_STRING, BLOSC2_VERSION_DATE);
 
   /* Create a super-chunk container */
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -92,6 +92,6 @@ int main(int argc, char* argv[]) {
 
   /* Free resources */
   blosc2_schunk_free(schunk);
-  blosc_destroy();
+  blosc2_destroy();
   return 0;
 }

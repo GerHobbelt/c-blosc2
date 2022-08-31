@@ -6,52 +6,58 @@ This is the classic API from Blosc1 with 32-bit limited containers.
 Main API
 ++++++++
 
-.. doxygenfunction:: blosc_init
+.. doxygenfunction:: blosc2_init
 
-.. doxygenfunction:: blosc_destroy
+.. doxygenfunction:: blosc2_destroy
 
-.. doxygenfunction:: blosc_compress
+.. doxygenfunction:: blosc1_compress
 
-.. doxygenfunction:: blosc_decompress
+.. doxygenfunction:: blosc1_decompress
 
-.. doxygenfunction:: blosc_getitem
+.. doxygenfunction:: blosc1_getitem
 
-.. doxygenfunction:: blosc_get_nthreads
+.. doxygenfunction:: blosc2_get_nthreads
 
-.. doxygenfunction:: blosc_set_nthreads
+.. doxygenfunction:: blosc2_set_nthreads
 
-.. doxygenfunction:: blosc_get_compressor
+.. doxygenfunction:: blosc1_get_compressor
 
-.. doxygenfunction:: blosc_set_compressor
+.. doxygenfunction:: blosc1_set_compressor
 
-.. doxygenfunction:: blosc_set_delta
+.. doxygenfunction:: blosc2_set_delta
 
-.. doxygenfunction:: blosc_set_blocksize
+.. doxygenfunction:: blosc1_get_blocksize
 
-.. doxygenfunction:: blosc_free_resources
+.. doxygenfunction:: blosc1_set_blocksize
+
+.. doxygenfunction:: blosc1_set_splitmode
+
+.. doxygenfunction:: blosc2_free_resources
 
 
 Compressed buffer information
 +++++++++++++++++++++++++++++
 
-.. doxygenfunction:: blosc_cbuffer_sizes
+.. doxygenfunction:: blosc1_cbuffer_sizes
 
-.. doxygenfunction:: blosc_cbuffer_metainfo
+.. doxygenfunction:: blosc1_cbuffer_metainfo
 
-.. doxygenfunction:: blosc_cbuffer_versions
+.. doxygenfunction:: blosc2_cbuffer_versions
 
-.. doxygenfunction:: blosc_cbuffer_complib
+.. doxygenfunction:: blosc2_cbuffer_complib
+
+.. doxygenfunction:: blosc1_cbuffer_validate
 
 
 Utility functions
 +++++++++++++++++
 
-.. doxygenfunction:: blosc_compcode_to_compname
+.. doxygenfunction:: blosc2_compcode_to_compname
 
-.. doxygenfunction:: blosc_compname_to_compcode
+.. doxygenfunction:: blosc2_compname_to_compcode
 
-.. doxygenfunction:: blosc_list_compressors
+.. doxygenfunction:: blosc2_list_compressors
 
-.. doxygenfunction:: blosc_get_version_string
+.. doxygenfunction:: blosc2_get_version_string
 
-.. doxygenfunction:: blosc_get_complib_info
+.. doxygenfunction:: blosc2_get_complib_info
