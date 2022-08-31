@@ -21,6 +21,7 @@
 */
 
 #include <stdio.h>
+#include <inttypes.h>
 #include "blosc2.h"
 
 #define SIZE (10 * 1000 * 1000)
@@ -60,8 +61,8 @@ int main(void) {
     return csize;
   }
 
-  printf("Compression: %zu -> %d (%.1fx)\n",
-         isize, csize, (1. * (double)isize) / csize);
+  printf("Compression: %" PRId64 " -> %d (%.1fx)\n",
+         (int64_t)isize, csize, (1. * (double)isize) / csize);
 
   ret = blosc_getitem(data_out, 5, 5, data_subset);
   if (ret < 0) {

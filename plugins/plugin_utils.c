@@ -6,11 +6,13 @@
 
 #include <stdio.h>
 #include "blosc2.h"
+#include "plugin_utils.h"
 
+#define BLOSC_PLUGINS_MAX_DIM 8
 
 void swap_store(void *dest, const void *pa, int size) {
   uint8_t *pa_ = (uint8_t *) pa;
-  uint8_t pa2_[8];
+  uint8_t *pa2_ = malloc((size_t) size);
   int i = 1; /* for big/little endian detection */
   char *p = (char *) &i;
 
@@ -45,6 +47,7 @@ void swap_store(void *dest, const void *pa, int size) {
     }
   }
   memcpy(dest, pa2_, size);
+  free(pa2_);
 }
 
 int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
@@ -56,7 +59,8 @@ int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_
   pmeta += 1;
 
   // version entry
-  // int8_t version = (int8_t)pmeta[0];  // positive fixnum (7-bit positive integer) commented to avoid warning
+  int8_t version = (int8_t)pmeta[0];  // positive fixnum (7-bit positive integer)
+  BLOSC_UNUSED_PARAM(version);
   pmeta += 1;
 
   // ndim entry
@@ -66,7 +70,7 @@ int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_
 
   // shape entry
   // Initialize to ones, as required by Caterva
-  for (int i = 0; i < 8; i++) shape[i] = 1;
+  for (int i = 0; i < BLOSC_PLUGINS_MAX_DIM; i++) shape[i] = 1;
   pmeta += 1;
   for (int8_t i = 0; i < ndim_aux; i++) {
     pmeta += 1;
@@ -76,7 +80,7 @@ int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_
 
   // chunkshape entry
   // Initialize to ones, as required by Caterva
-  for (int i = 0; i < 8; i++) chunkshape[i] = 1;
+  for (int i = 0; i < BLOSC_PLUGINS_MAX_DIM; i++) chunkshape[i] = 1;
   pmeta += 1;
   for (int8_t i = 0; i < ndim_aux; i++) {
     pmeta += 1;
@@ -86,7 +90,7 @@ int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_
 
   // blockshape entry
   // Initialize to ones, as required by Caterva
-  for (int i = 0; i < 8; i++) blockshape[i] = 1;
+  for (int i = 0; i < BLOSC_PLUGINS_MAX_DIM; i++) blockshape[i] = 1;
   pmeta += 1;
   for (int8_t i = 0; i < ndim_aux; i++) {
     pmeta += 1;
@@ -95,11 +99,4 @@ int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_
   }
   int32_t slen = (int32_t)(pmeta - smeta);
   return slen;
-}
-
-void index_multidim_to_unidim(const int64_t *index, int8_t ndim, const int64_t *strides, int64_t *i) {
-  *i = 0;
-  for (int j = 0; j < ndim; ++j) {
-    *i += index[j] * strides[j];
-  }
 }

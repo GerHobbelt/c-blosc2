@@ -69,7 +69,7 @@ int64_t test_read(void *ptr, int64_t size, int64_t nitems, void *stream) {
   return blosc2_stdio_read(ptr, size, nitems, my->bfile);
 }
 
-int64_t test_truncate(void *stream, int64_t size) {
+int test_truncate(void *stream, int64_t size) {
   test_file *my = (test_file *) stream;
   my->params->truncate++;
   return blosc2_stdio_truncate(my->bfile, size);
@@ -115,6 +115,7 @@ CUTEST_TEST_SETUP(udio) {
 
 
 CUTEST_TEST_TEST(udio) {
+  BLOSC_UNUSED_PARAM(data);
   CUTEST_GET_PARAMETER(backend, test_udio_backend);
 
   /* Free resources */
@@ -169,6 +170,7 @@ CUTEST_TEST_TEST(udio) {
 }
 
 CUTEST_TEST_TEARDOWN(udio) {
+  BLOSC_UNUSED_PARAM(data);
   blosc_destroy();
 }
 

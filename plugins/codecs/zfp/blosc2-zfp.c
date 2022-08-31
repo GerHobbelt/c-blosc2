@@ -696,45 +696,62 @@ int zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output
     return (int) output_len;
 }
 
-
-int zfp_getcell(blosc2_context *context, const uint8_t *block, int32_t cbytes, uint8_t *dest, int32_t destsize) {
+int zfp_getcell(void *thread_context, const uint8_t *block, int32_t cbytes, uint8_t *dest, int32_t destsize) {
+    struct thread_context *thread_ctx = thread_context;
+    blosc2_context *context = thread_ctx->parent_context;
     bool meta = false;
-    uint8_t ndim = ZFP_MAX_DIM + 1;
-    int32_t blockshape[4];      // ZFP only works for caterva datasets
-    for (int nmetalayer = 0; nmetalayer < context->schunk->nmetalayers; nmetalayer++) {
-        if (strcmp("caterva", context->schunk->metalayers[nmetalayer]->name) == 0) {
-            meta = true;
-            uint8_t *pmeta = context->schunk->metalayers[nmetalayer]->content;
-            ndim = (int8_t) pmeta[2];
-            pmeta += (6 + ndim * 9 + ndim * 5);
-            for (int8_t i = 0; (uint8_t) i < ndim; i++) {
-                pmeta += 1;
-                swap_store(blockshape + i, pmeta, sizeof(int32_t));
-                pmeta += sizeof(int32_t);
+    int8_t ndim = ZFP_MAX_DIM + 1;
+    int32_t blockmeta[ZFP_MAX_DIM];
+    if (context->schunk->blockshape == NULL) {
+        // blockshape is not filled yet.  Use the Caterva layer to populate it.
+        for (int nmetalayer = 0; nmetalayer < context->schunk->nmetalayers; nmetalayer++) {
+            if (strcmp("caterva", context->schunk->metalayers[nmetalayer]->name) == 0) {
+                meta = true;
+                uint8_t *pmeta = context->schunk->metalayers[nmetalayer]->content;
+                ndim = (int8_t) pmeta[2];
+                assert(ndim <= ZFP_MAX_DIM);
+                pmeta += (6 + ndim * 9 + ndim * 5);
+                for (int8_t i = 0; (uint8_t) i < ndim; i++) {
+                  pmeta += 1;
+                  swap_store(blockmeta + i, pmeta, sizeof(int32_t));
+                  pmeta += sizeof(int32_t);
+                }
             }
         }
+        if (!meta) {
+            return -1;
+        }
+        context->schunk->ndim = ndim;
+        context->schunk->blockshape = malloc(sizeof(int64_t) * ndim);
+        for (int i = 0; i < ndim; ++i) {
+            context->schunk->blockshape[i] = (int64_t) blockmeta[i];
+        }
     }
-    if (!meta) {
-        return -1;
-    }
-    assert(ndim <= ZFP_MAX_DIM);
-    int64_t cell_start_ndim[4], cell_ind_ndim[4], ncell_ndim[4], ind_strides[4], cell_strides[4];
+    ndim = context->schunk->ndim;
+    int64_t *blockshape = context->schunk->blockshape;
+
+    // Compute the coordinates of the cell
+    int64_t cell_start_ndim[ZFP_MAX_DIM];
+    int64_t cell_ind_ndim[ZFP_MAX_DIM];
+    int64_t ncell_ndim[ZFP_MAX_DIM];
+    int64_t ind_strides[ZFP_MAX_DIM];
+    int64_t cell_strides[ZFP_MAX_DIM];
     int64_t cell_ind, ncell;
-    int cellshape = 4;
-    index_unidim_to_multidim(ndim, blockshape, context->zfp_cell_start, cell_start_ndim);
+    blosc2_unidim_to_multidim(ndim, blockshape, thread_ctx->zfp_cell_start, cell_start_ndim);
     for (int i = 0; i < ndim; ++i) {
-        cell_ind_ndim[i] = cell_start_ndim[i] % cellshape;
-        ncell_ndim[i] = cell_start_ndim[i] / cellshape;
+        cell_ind_ndim[i] = cell_start_ndim[i] % ZFP_MAX_DIM;
+        ncell_ndim[i] = cell_start_ndim[i] / ZFP_MAX_DIM;
     }
     ind_strides[ndim - 1] = cell_strides[ndim - 1] = 1;
     for (int i = ndim - 2; i >= 0; --i) {
-        ind_strides[i] = cellshape * ind_strides[i + 1];
-        cell_strides[i] = ((blockshape[i + 1] - 1) / cellshape + 1) * cell_strides[i + 1];
+        ind_strides[i] = ZFP_MAX_DIM * ind_strides[i + 1];
+        cell_strides[i] = ((blockshape[i + 1] - 1) / ZFP_MAX_DIM + 1) * cell_strides[i + 1];
     }
-    index_multidim_to_unidim(cell_ind_ndim, (int8_t) ndim, ind_strides, &cell_ind);
-    index_multidim_to_unidim(ncell_ndim, (int8_t) ndim, cell_strides, &ncell);
+    blosc2_multidim_to_unidim(cell_ind_ndim, (int8_t) ndim, ind_strides, &cell_ind);
+    blosc2_multidim_to_unidim(ncell_ndim, (int8_t) ndim, cell_strides, &ncell);
     int cell_nitems = (int) (1u << (2 * ndim));
-    if ((context->zfp_cell_nitems > cell_nitems) || ((cell_ind + context->zfp_cell_nitems) > cell_nitems)) {
+    if ((thread_ctx->zfp_cell_nitems > cell_nitems) ||
+        ((cell_ind + thread_ctx->zfp_cell_nitems) > cell_nitems)) {
         return 0;
     }
 
@@ -756,7 +773,7 @@ int zfp_getcell(blosc2_context *context, const uint8_t *block, int32_t cbytes, u
             printf("\n ZFP is not available for this typesize \n");
             return 0;
     }
-    uint8_t compmeta = context->compcode_meta;                                 // access to compressed chunk header
+    uint8_t compmeta = context->compcode_meta;   // access to compressed chunk header
     double rate = (double) (compmeta * typesize * 8) /
                   100.0;     // convert from output size / input size to output bits per input value
     zfp_stream_set_rate(zfp, rate, type, ndim, zfp_false);
@@ -843,16 +860,17 @@ int zfp_getcell(blosc2_context *context, const uint8_t *block, int32_t cbytes, u
             printf("\n ZFP is not available for this number of dims \n");
             return 0;
     }
-    memcpy(dest, &cell[cell_ind * typesize], context->zfp_cell_nitems * typesize);
+    memcpy(dest, &cell[cell_ind * typesize], thread_ctx->zfp_cell_nitems * typesize);
     zfp_stream_close(zfp);
     stream_close(stream);
     free(cell);
 
-    if ((zfpsize == 0) || ((int32_t)zfpsize > (destsize * 8)) || ((int32_t)zfpsize > (cell_nitems * typesize * 8)) ||
-        ((context->zfp_cell_nitems * typesize * 8) > (int32_t)zfpsize)) {
+    if ((zfpsize == 0) || ((int32_t)zfpsize > (destsize * 8)) ||
+        ((int32_t)zfpsize > (cell_nitems * typesize * 8)) ||
+        ((thread_ctx->zfp_cell_nitems * typesize * 8) > (int32_t)zfpsize)) {
         BLOSC_TRACE_ERROR("ZFP error or small destsize");
         return -1;
     }
 
-    return (int) (context->zfp_cell_nitems * typesize);
+    return (int) (thread_ctx->zfp_cell_nitems * typesize);
 }

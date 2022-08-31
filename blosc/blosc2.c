@@ -435,15 +435,15 @@ static int lz4_wrap_decompress(const char* input, size_t compressed_length,
 static int zlib_wrap_compress(const char* input, size_t input_length,
                               char* output, size_t maxout, int clevel) {
   int status;
-  uLongf cl = (uLongf)maxout;
-#ifdef ZLIB_COMPAT
-  status = compress2(
-#elif defined(HAVE_ZLIB_NG)
+#if defined(HAVE_ZLIB_NG) && ! defined(ZLIB_COMPAT)
+  size_t cl = maxout;
   status = zng_compress2(
+      (uint8_t*)output, &cl, (uint8_t*)input, input_length, clevel);
 #else
+  uLongf cl = (uLongf)maxout;
   status = compress2(
-#endif
       (Bytef*)output, &cl, (Bytef*)input, (uLong)input_length, clevel);
+#endif
   if (status != Z_OK) {
     return 0;
   }
@@ -453,15 +453,15 @@ static int zlib_wrap_compress(const char* input, size_t input_length,
 static int zlib_wrap_decompress(const char* input, size_t compressed_length,
                                 char* output, size_t maxout) {
   int status;
-  uLongf ul = (uLongf)maxout;
-#ifdef ZLIB_COMPAT
-  status = uncompress(
-#elif defined(HAVE_ZLIB_NG)
+#if defined(HAVE_ZLIB_NG) && ! defined(ZLIB_COMPAT)
+  size_t ul = maxout;
   status = zng_uncompress(
+      (uint8_t*)output, &ul, (uint8_t*)input, compressed_length);
 #else
+  uLongf ul = (uLongf)maxout;
   status = uncompress(
-#endif
       (Bytef*)output, &ul, (Bytef*)input, (uLong)compressed_length);
+#endif
   if (status != Z_OK) {
     return 0;
   }
@@ -1530,7 +1530,7 @@ static int blosc_d(
       fp = io_cb->open(urlpath, "rb", context->schunk->storage->io->params);
       BLOSC_ERROR_NULL(fp, BLOSC2_ERROR_FILE_OPEN);
       // The offset of the block is src_offset
-      io_cb->seek(fp, chunk_offset + src_offset, SEEK_SET);
+      io_cb->seek(fp, frame->file_offset + chunk_offset + src_offset, SEEK_SET);
     }
     // We can make use of tmp3 because it will be used after src is not needed anymore
     int64_t rbytes = io_cb->read(tmp3, 1, block_csize, fp);
@@ -1612,7 +1612,8 @@ static int blosc_d(
         return BLOSC2_ERROR_POSTFILTER;
       }
     }
-    context->zfp_cell_nitems = 0;
+    thread_context->zfp_cell_nitems = 0;
+
     return bsize_;
   }
 
@@ -1735,18 +1736,19 @@ static int blosc_d(
         bool getcell = false;
 
 #if defined(HAVE_PLUGINS)
-        if ((context->compcode == BLOSC_CODEC_ZFP_FIXED_RATE) && (context->zfp_cell_nitems > 0)) {
-          nbytes = zfp_getcell(context, src, cbytes, _dest, neblock);
+        if ((context->compcode == BLOSC_CODEC_ZFP_FIXED_RATE) &&
+            (thread_context->zfp_cell_nitems > 0)) {
+          nbytes = zfp_getcell(thread_context, src, cbytes, _dest, neblock);
           if (nbytes < 0) {
             return BLOSC2_ERROR_DATA;
           }
-          if (nbytes == context->zfp_cell_nitems * typesize) {
+          if (nbytes == thread_context->zfp_cell_nitems * typesize) {
             getcell = true;
           }
         }
 #endif /* HAVE_PLUGINS */
         if (!getcell) {
-          context->zfp_cell_nitems = 0;
+          thread_context->zfp_cell_nitems = 0;
           for (int i = 0; i < g_ncodecs; ++i) {
             if (g_codecs[i].compcode == context->compcode) {
               blosc2_dparams dparams;
@@ -1777,7 +1779,7 @@ static int blosc_d(
       }
 
       /* Check that decompressed bytes number is correct */
-      if ((nbytes != neblock) && (context->zfp_cell_nitems == 0)) {
+      if ((nbytes != neblock) && (thread_context->zfp_cell_nitems == 0)) {
         return BLOSC2_ERROR_DATA;
       }
 
@@ -1915,6 +1917,8 @@ static int init_thread_context(struct thread_context* thread_context, blosc2_con
   thread_context->tmp3 = thread_context->tmp2 + ebsize;
   thread_context->tmp4 = thread_context->tmp3 + ebsize;
   thread_context->tmp_blocksize = context->blocksize;
+  thread_context->zfp_cell_nitems = 0;
+  thread_context->zfp_cell_start = 0;
   #if defined(HAVE_ZSTD)
   thread_context->zstd_cctx = NULL;
   thread_context->zstd_dctx = NULL;
@@ -2877,8 +2881,8 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
 
 #if defined(HAVE_PLUGINS)
     if (context->compcode == BLOSC_CODEC_ZFP_FIXED_RATE) {
-      context->zfp_cell_start = startb / context->typesize;
-      context->zfp_cell_nitems = nitems;
+      scontext->zfp_cell_start = startb / context->typesize;
+      scontext->zfp_cell_nitems = nitems;
     }
 #endif /* HAVE_PLUGINS */
 
@@ -2899,11 +2903,11 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
       ntbytes = cbytes;
       break;
     }
-    if (context->zfp_cell_nitems > 0) {
+    if (scontext->zfp_cell_nitems > 0) {
       if (cbytes == bsize2) {
         memcpy((uint8_t *) dest, tmp2, (unsigned int) bsize2);
       } else if (cbytes == context->blocksize) {
-        memcpy((uint8_t *) dest, tmp2 + context->zfp_cell_start * context->typesize, (unsigned int) bsize2);
+        memcpy((uint8_t *) dest, tmp2 + scontext->zfp_cell_start * context->typesize, (unsigned int) bsize2);
         cbytes = bsize2;
       }
     } else if (!get_single_block) {
@@ -2913,7 +2917,7 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
     ntbytes += bsize2;
   }
 
-  context->zfp_cell_nitems = 0;
+  scontext->zfp_cell_nitems = 0;
 
   return ntbytes;
 }
@@ -3159,10 +3163,12 @@ static void t_blosc_do_job(void *ctxt)
   } /* closes while (nblock_) */
 
   if (static_schedule) {
+    pthread_mutex_lock(&context->count_mutex);
     context->output_bytes = context->sourcesize;
     if (compress) {
       context->output_bytes += context->header_overhead;
     }
+    pthread_mutex_unlock(&context->count_mutex);
   }
 
 }
@@ -3203,6 +3209,7 @@ int init_threadpool(blosc2_context *context) {
   /* Initialize mutex and condition variable objects */
   pthread_mutex_init(&context->count_mutex, NULL);
   pthread_mutex_init(&context->delta_mutex, NULL);
+  pthread_mutex_init(&context->nchunk_mutex, NULL);
   pthread_cond_init(&context->delta_cv, NULL);
 
   /* Set context thread sentinels */
@@ -3591,6 +3598,7 @@ int release_threadpool(blosc2_context *context) {
     /* Release mutex and condition variable objects */
     pthread_mutex_destroy(&context->count_mutex);
     pthread_mutex_destroy(&context->delta_mutex);
+    pthread_mutex_destroy(&context->nchunk_mutex);
     pthread_cond_destroy(&context->delta_cv);
 
     /* Barriers */
@@ -3693,8 +3701,6 @@ blosc2_context* blosc2_create_dctx(blosc2_dparams dparams) {
   context->block_maskout = NULL;
   context->block_maskout_nitems = 0;
   context->schunk = dparams.schunk;
-  context->zfp_cell_nitems = 0;
-  context->zfp_cell_start = 0;
 
   if (dparams.postfilter != NULL) {
     context->postfilter = dparams.postfilter;
@@ -3976,10 +3982,12 @@ int register_filter_private(blosc2_filter *filter) {
         BLOSC_TRACE_ERROR("The id must be greater or equal than %d", BLOSC2_GLOBAL_REGISTERED_FILTERS_START);
         return BLOSC2_ERROR_FAILURE;
     }
+    /* This condition can never be fulfilled
     if (filter->id > BLOSC2_USER_REGISTERED_FILTERS_STOP) {
         BLOSC_TRACE_ERROR("The id must be lower or equal than %d", BLOSC2_USER_REGISTERED_FILTERS_STOP);
         return BLOSC2_ERROR_FAILURE;
     }
+    */
 
     // Check if the filter is already registered
     for (uint64_t i = 0; i < g_nfilters; ++i) {
@@ -4018,10 +4026,12 @@ int register_codec_private(blosc2_codec *codec) {
         BLOSC_TRACE_ERROR("The id must be greater or equal than %d", BLOSC2_GLOBAL_REGISTERED_CODECS_START);
         return BLOSC2_ERROR_FAILURE;
     }
+    /* This condition can never be fulfilled
     if (codec->compcode > BLOSC2_USER_REGISTERED_CODECS_STOP) {
         BLOSC_TRACE_ERROR("The id must be lower or equal to %d", BLOSC2_USER_REGISTERED_CODECS_STOP);
         return BLOSC2_ERROR_FAILURE;
     }
+     */
 
     // Check if the code is already registered
     for (int i = 0; i < g_ncodecs; ++i) {
@@ -4093,4 +4103,27 @@ blosc2_io_cb *blosc2_get_io_cb(uint8_t id) {
     return blosc2_get_io_cb(id);
   }
   return NULL;
+}
+
+void blosc2_unidim_to_multidim(uint8_t ndim, int64_t *shape, int64_t i, int64_t *index) {
+    int64_t strides[BLOSC2_MAX_DIM];
+  if (ndim == 0) {
+    return;
+  }
+  strides[ndim - 1] = 1;
+    for (int j = ndim - 2; j >= 0; --j) {
+        strides[j] = shape[j + 1] * strides[j + 1];
+    }
+
+    index[0] = i / strides[0];
+    for (int j = 1; j < ndim; ++j) {
+        index[j] = (i % strides[j - 1]) / strides[j];
+    }
+}
+
+void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, const int64_t *strides, int64_t *i) {
+    *i = 0;
+    for (int j = 0; j < ndim; ++j) {
+        *i += index[j] * strides[j];
+    }
 }

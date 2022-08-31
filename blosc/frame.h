@@ -61,6 +61,7 @@ typedef struct {
   uint32_t trailer_len;     //!< The current length of the trailer in (compressed) bytes
   bool sframe;              //!< Whether the frame is sparse (true) or not
   blosc2_schunk *schunk;    //!< The schunk associated
+  int64_t file_offset;      //!< The offset where the frame starts inside the file
 } blosc2_frame_s;
 
 
@@ -108,7 +109,7 @@ int frame_free(blosc2_frame_s *frame);
  *
  * @return The frame created from the file.
  */
-blosc2_frame_s* frame_from_file(const char *urlpath, const blosc2_io *io_cb);
+blosc2_frame_s* frame_from_file_offset(const char *urlpath, const blosc2_io *io_cb, int64_t offset);
 
 /**
  * @brief Initialize a frame out of a frame buffer.

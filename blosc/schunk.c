@@ -308,7 +308,7 @@ blosc2_schunk* blosc2_schunk_open_udio(const char* urlpath, const blosc2_io *udi
     return NULL;
   }
 
-  blosc2_frame_s* frame = frame_from_file(urlpath, udio);
+  blosc2_frame_s* frame = frame_from_file_offset(urlpath, udio, 0);
   if (frame == NULL) {
     return NULL;
   }
@@ -325,6 +325,27 @@ blosc2_schunk* blosc2_schunk_open_udio(const char* urlpath, const blosc2_io *udi
 
 blosc2_schunk* blosc2_schunk_open(const char* urlpath) {
   return blosc2_schunk_open_udio(urlpath, &BLOSC2_IO_DEFAULTS);
+}
+
+BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_offset(const char* urlpath, int64_t offset) {
+  if (urlpath == NULL) {
+    BLOSC_TRACE_ERROR("You need to supply a urlpath.");
+    return NULL;
+  }
+
+  blosc2_frame_s* frame = frame_from_file_offset(urlpath, &BLOSC2_IO_DEFAULTS, offset);
+  if (frame == NULL) {
+    return NULL;
+  }
+  blosc2_schunk* schunk = frame_to_schunk(frame, false, &BLOSC2_IO_DEFAULTS);
+
+  // Set the storage with proper defaults
+  size_t pathlen = strlen(urlpath);
+  schunk->storage->urlpath = malloc(pathlen + 1);
+  strcpy(schunk->storage->urlpath, urlpath);
+  schunk->storage->contiguous = !frame->sframe;
+
+  return schunk;
 }
 
 int64_t blosc2_schunk_to_buffer(blosc2_schunk* schunk, uint8_t** dest, bool* needs_free) {
@@ -376,6 +397,29 @@ int64_t frame_to_file(blosc2_frame_s* frame, const char* urlpath) {
 }
 
 
+/* Append an in-memory frame to a file. */
+int64_t append_frame_to_file(blosc2_frame_s* frame, const char* urlpath) {
+    blosc2_io_cb *io_cb = blosc2_get_io_cb(frame->schunk->storage->io->id);
+    if (io_cb == NULL) {
+        BLOSC_TRACE_ERROR("Error getting the input/output API");
+        return BLOSC2_ERROR_PLUGIN_IO;
+    }
+    void* fp = io_cb->open(urlpath, "ab", frame->schunk->storage->io);
+    int64_t offset;
+
+# if (UNIX)
+    offset = io_cb->tell(fp);
+# else
+    io_cb->seek(fp, 0, SEEK_END);
+    offset = io_cb->tell(fp);
+# endif
+
+    io_cb->write(frame->cframe, frame->len, 1, fp);
+    io_cb->close(fp);
+    return offset;
+}
+
+
 /* Write super-chunk out to a file. */
 int64_t blosc2_schunk_to_file(blosc2_schunk* schunk, const char* urlpath) {
   if (urlpath == NULL) {
@@ -407,6 +451,37 @@ int64_t blosc2_schunk_to_file(blosc2_schunk* schunk, const char* urlpath) {
 }
 
 
+/* Append a super-chunk to a file. */
+int64_t blosc2_schunk_append_file(blosc2_schunk* schunk, const char* urlpath) {
+    if (urlpath == NULL) {
+        BLOSC_TRACE_ERROR("urlpath cannot be NULL");
+        return BLOSC2_ERROR_INVALID_PARAM;
+    }
+
+    // Accelerated path for in-memory frames
+    if (schunk->storage->contiguous && schunk->storage->urlpath == NULL) {
+        int64_t offset = append_frame_to_file((blosc2_frame_s*)(schunk->frame), urlpath);
+        if (offset <= 0) {
+            BLOSC_TRACE_ERROR("Error writing to file");
+            return offset;
+        }
+        return offset;
+    }
+
+    // Copy to a contiguous file
+    blosc2_storage frame_storage = {.contiguous=true, .urlpath=NULL};
+    blosc2_schunk* schunk_copy = blosc2_schunk_copy(schunk, &frame_storage);
+    if (schunk_copy == NULL) {
+        BLOSC_TRACE_ERROR("Error during the conversion of schunk to buffer.");
+        return BLOSC2_ERROR_SCHUNK_COPY;
+    }
+    blosc2_frame_s* frame = (blosc2_frame_s*)(schunk_copy->frame);
+    int64_t offset = append_frame_to_file(frame, urlpath);
+    blosc2_schunk_free(schunk_copy);
+    return offset;
+}
+
+
 /* Free all memory from a super-chunk. */
 int blosc2_schunk_free(blosc2_schunk *schunk) {
   if (schunk->data != NULL) {
@@ -419,6 +494,8 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
     blosc2_free_ctx(schunk->cctx);
   if (schunk->dctx != NULL)
     blosc2_free_ctx(schunk->dctx);
+  if (schunk->blockshape != NULL)
+    free(schunk->blockshape);
 
   if (schunk->nmetalayers > 0) {
     for (int i = 0; i < schunk->nmetalayers; i++) {
@@ -472,6 +549,12 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
 blosc2_schunk* blosc2_schunk_from_buffer(uint8_t *cframe, int64_t len, bool copy) {
   blosc2_frame_s* frame = frame_from_cframe(cframe, len, false);
   if (frame == NULL) {
+    return NULL;
+  }
+  // Check that the buffer actually comes from a cframe
+  char *magic_number = (char *)cframe;
+  magic_number += FRAME_HEADER_MAGIC;
+  if (strcmp(magic_number, "b2frame\0") != 0) {
     return NULL;
   }
   blosc2_schunk* schunk = frame_to_schunk(frame, copy, &BLOSC2_IO_DEFAULTS);
@@ -1018,6 +1101,14 @@ int blosc2_schunk_decompress_chunk(blosc2_schunk *schunk, int64_t nchunk,
  * is returned instead.
 */
 int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chunk, bool *needs_free) {
+  if (schunk->dctx->threads_started > 1) {
+    pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
+    schunk->current_nchunk = nchunk;
+    pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
+  }
+  else {
+    schunk->current_nchunk = nchunk;
+  }
   blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
   if (frame != NULL) {
     return frame_get_chunk(frame, nchunk, chunk, needs_free);
@@ -1029,7 +1120,6 @@ int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chu
     return BLOSC2_ERROR_INVALID_PARAM;
   }
 
-  schunk->current_nchunk = nchunk;
   *chunk = schunk->data[nchunk];
   if (*chunk == 0) {
     *needs_free = 0;
@@ -1057,6 +1147,14 @@ int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chu
  * is returned instead.
 */
 int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chunk, bool *needs_free) {
+  if (schunk->dctx->threads_started > 1) {
+    pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
+    schunk->current_nchunk = nchunk;
+    pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
+  }
+  else {
+    schunk->current_nchunk = nchunk;
+  }
   blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
   if (schunk->frame != NULL) {
     return frame_get_lazychunk(frame, nchunk, chunk, needs_free);
@@ -1068,7 +1166,6 @@ int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t *
     return BLOSC2_ERROR_INVALID_PARAM;
   }
 
-  schunk->current_nchunk = nchunk;
   *chunk = schunk->data[nchunk];
   if (*chunk == 0) {
     *needs_free = 0;

@@ -51,11 +51,15 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC_VERSION_MINOR    1    /* for minor interface/format changes  */
-#define BLOSC_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
+#define BLOSC_VERSION_MINOR    2    /* for minor interface/format changes  */
+#define BLOSC_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC_VERSION_STRING   "2.1.1"  /* string version.  Sync with above! */
-#define BLOSC_VERSION_DATE     "$Date:: 2022-05-07 #$"    /* date version */
+#define BLOSC_VERSION_STRING   "2.2.0"  /* string version.  Sync with above! */
+#define BLOSC_VERSION_DATE     "$Date:: 2022-07-05 #$"    /* date version */
+
+
+/* The maximum number of dimensions for caterva arrays */
+#define BLOSC2_MAX_DIM 8
 
 
 /* Tracing macros */
@@ -1477,6 +1481,11 @@ typedef struct blosc2_schunk {
   int16_t nvlmetalayers;
   //!< The number of variable-length metalayers.
   blosc2_btune *udbtune;
+  //<! Struct for BTune
+  int8_t ndim;
+  //<! The ndim (mainly for ZFP usage)
+  int64_t *blockshape;
+  //<! The blockshape (mainly for ZFP usage)
 } blosc2_schunk;
 
 
@@ -1524,24 +1533,29 @@ BLOSC_EXPORT blosc2_schunk* blosc2_schunk_from_buffer(uint8_t *cframe, int64_t l
 /**
  * @brief Open an existing super-chunk that is on-disk (frame). No in-memory copy is made.
  *
- * @param storage The storage properties of the source.
- *
- * @remark The storage.urlpath must be not NULL and it should exist on-disk.
- * New data or metadata can be appended or updated.
+ * @param urlpath The file name.
  *
  * @return The new super-chunk.  NULL if not found or not in frame format.
  */
 BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open(const char* urlpath);
 
 /**
+ * @brief Open an existing super-chunk that is on-disk (frame). No in-memory copy is made.
+ *
+ * @param urlpath The file name.
+ *
+ * @param offset The frame offset.
+ *
+ * @return The new super-chunk.  NULL if not found or not in frame format.
+ */
+BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_offset(const char* urlpath, int64_t offset);
+
+/**
  * @brief Open an existing super-chunk (no copy is made) using a user-defined I/O interface.
  *
- * @param storage The storage properties of the source.
+ * @param urlpath The file name.
  *
  * @param udio The user-defined I/O interface.
- *
- * @remark The storage.urlpath must be not NULL and it should exist on-disk.
- * New data or metadata can be appended or updated.
  *
  * @return The new super-chunk.
  */
@@ -1572,6 +1586,15 @@ BLOSC_EXPORT int64_t blosc2_schunk_to_buffer(blosc2_schunk* schunk, uint8_t** cf
  */
 BLOSC_EXPORT int64_t blosc2_schunk_to_file(blosc2_schunk* schunk, const char* urlpath);
 
+/* @brief Append a super-chunk into a file.
+ *
+ * @param schunk The super-chunk to write.
+ * @param urlpath The path for persistent storage.
+ *
+ * @return If successful, return the offset where @p schunk has been appended in @p urlpath.
+ * Else, a negative value.
+ */
+int64_t blosc2_schunk_append_file(blosc2_schunk* schunk, const char* urlpath);
 
 /**
  * @brief Release resources from a super-chunk.
@@ -2087,6 +2110,21 @@ BLOSC_EXPORT int blosc2_remove_urlpath(const char *path);
  * @brief Rename a file or a directory given by old_urlpath to new_path.
  */
 BLOSC_EXPORT int blosc2_rename_urlpath(char* old_urlpath, char* new_path);
+
+
+/*********************************************************************
+  Index utilities.
+*********************************************************************/
+
+/*
+ * @brief Convert a sequential index into a multidimensional index
+ */
+BLOSC_EXPORT void blosc2_unidim_to_multidim(uint8_t ndim, int64_t *shape, int64_t i, int64_t *index);
+
+/*
+ * @brief Convert a multidimensional index into a sequential index
+ */
+BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, const int64_t *strides, int64_t *i);
 
 #ifdef __cplusplus
 }
