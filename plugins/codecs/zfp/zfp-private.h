@@ -12,7 +12,10 @@
 
 #ifndef ZFP_PRIVATE_H
 #define ZFP_PRIVATE_H
-#include "context.h"
+
+#define ZFP_MAX_DIM 4
+#define ZFP_CELL_SHAPE 4
+
 
 #if defined (__cplusplus)
 extern "C" {
@@ -66,15 +69,16 @@ static void swap_store(void *dest, const void *pa, int size) {
     memcpy(dest, pa2_, size);
 }
 
-static int32_t deserialize_meta(uint8_t *smeta, uint32_t smeta_len, int8_t *ndim, int64_t *shape,
+static int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
                          int32_t *chunkshape, int32_t *blockshape) {
+    BLOSC_UNUSED_PARAM(smeta_len);
     uint8_t *pmeta = smeta;
 
     // Check that we have an array with 5 entries (version, ndim, shape, chunkshape, blockshape)
     pmeta += 1;
 
     // version entry
-    int8_t version = pmeta[0];  // positive fixnum (7-bit positive integer)
+    // int8_t version = pmeta[0];  // positive fixnum (7-bit positive integer) commented to avoid warning
     pmeta += 1;
 
     // ndim entry
@@ -111,8 +115,28 @@ static int32_t deserialize_meta(uint8_t *smeta, uint32_t smeta_len, int8_t *ndim
         swap_store(blockshape + i, pmeta, sizeof(int32_t));
         pmeta += sizeof(int32_t);
     }
-    uint32_t slen = (uint32_t)(pmeta - smeta);
-    return 0;
+    int32_t slen = pmeta - smeta;
+    return slen;
+}
+
+static void index_unidim_to_multidim(uint8_t ndim, int32_t *shape, int64_t i, int64_t *index) {
+    int64_t strides[ZFP_MAX_DIM];
+    strides[ndim - 1] = 1;
+    for (int j = ndim - 2; j >= 0; --j) {
+        strides[j] = shape[j + 1] * strides[j + 1];
+    }
+
+    index[0] = i / strides[0];
+    for (int j = 1; j < ndim; ++j) {
+        index[j] = (i % strides[j - 1]) / strides[j];
+    }
+}
+
+static void index_multidim_to_unidim(int64_t *index, int8_t ndim, int64_t *strides, int64_t *i) {
+    *i = 0;
+    for (int j = 0; j < ndim; ++j) {
+        *i += index[j] * strides[j];
+    }
 }
 
 #if defined (__cplusplus)

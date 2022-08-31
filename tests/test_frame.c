@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include "test_common.h"
 #include "frame.h"
+#include <inttypes.h>
 
 #if defined(_WIN32)
 #define snprintf _snprintf
@@ -132,7 +133,7 @@ static char* test_frame(void) {
 
   if (metalayers) {
     uint8_t* _content;
-    uint32_t _content_len;
+    int32_t _content_len;
     blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
@@ -146,7 +147,7 @@ static char* test_frame(void) {
   }
 
   if (vlmetalayers) {
-    uint32_t content_len_;
+    int32_t content_len_;
     blosc2_vlmeta_get(schunk, "vlmetalayer", &content_, &content_len_);
     mu_assert("ERROR: bad vlmetalayers length in frame", (size_t) content_len_ == content_len);
     mu_assert("ERROR: bad vlmetalayers data in frame", strncmp((char*)content_, content, content_len) == 0);
@@ -155,7 +156,7 @@ static char* test_frame(void) {
   }
 
   // Feed it with data
-  int _nchunks = 0;
+  int64_t _nchunks = 0;
   for (int nchunk = 0; nchunk < nchunks; nchunk++) {
     for (int i = 0; i < CHUNKSIZE; i++) {
       data[i] = i + nchunk * CHUNKSIZE;
@@ -173,7 +174,7 @@ static char* test_frame(void) {
 
   if (metalayers) {
     uint8_t* _content;
-    uint32_t _content_len;
+    int32_t _content_len;
     blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
@@ -188,7 +189,7 @@ static char* test_frame(void) {
   }
 
   if (vlmetalayers) {
-    uint32_t content_len_;
+    int32_t content_len_;
     blosc2_vlmeta_get(schunk, "vlmetalayer", &content_, &content_len_);
     mu_assert("ERROR: bad vlmetalayers length in frame", (size_t) content_len_ == content_len2);
     mu_assert("ERROR: bad vlmetalayers data in frame", strncmp((char*)content_, content2, content_len2) == 0);
@@ -222,7 +223,7 @@ static char* test_frame(void) {
   cbytes = schunk->cbytes;
   if (nchunks > 0) {
     if (nbytes < 10 * cbytes)
-        printf("%ld -> %ld\n", (long)nbytes, (long)cbytes);
+        printf("%" PRId64 " -> %" PRId64 "\n", nbytes, cbytes);
     mu_assert("ERROR: bad compression ratio in frame", nbytes > 10 * cbytes);
   }
 
@@ -237,7 +238,7 @@ static char* test_frame(void) {
 
   if (metalayers) {
     uint8_t* _content;
-    uint32_t _content_len;
+    int32_t _content_len;
     blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
@@ -251,7 +252,7 @@ static char* test_frame(void) {
   }
 
   if (vlmetalayers) {
-    uint32_t content_len_;
+    int32_t content_len_;
     blosc2_vlmeta_get(schunk, "vlmetalayer", &content_, &content_len_);
     mu_assert("ERROR: bad vlmetalayers length in frame", (size_t) content_len_ == content_len3);
     mu_assert("ERROR: bad vlmetalayers data in frame", strncmp((char*)content_, content3, content_len3) == 0);

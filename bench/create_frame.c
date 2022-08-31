@@ -38,6 +38,7 @@ Process finished with exit code 0
 
 #include <stdio.h>
 #include <blosc2.h>
+#include <inttypes.h>
 
 #define KB  (1024.)
 #define MB  (1024 * KB)
@@ -105,10 +106,10 @@ int create_cframe(const char* compname, bool contiguous) {
 #else
   int special_value = BLOSC2_SPECIAL_UNINIT;
 #endif
-  int rc = blosc2_schunk_fill_special(schunk, nitems, special_value, isize);
+  int64_t rc = blosc2_schunk_fill_special(schunk, nitems, special_value, isize);
   if (rc < 0) {
-    printf("Error in fill special.  Error code: %d\n", rc);
-    return rc;
+    printf("Error in fill special.  Error code: %" PRId64 "\n", rc);
+    return (int)rc;
   }
 #else
   // In these methods, nitems can only be an actual multiple of CHUNKSHAPE

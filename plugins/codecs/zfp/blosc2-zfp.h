@@ -12,29 +12,33 @@
 
 #ifndef BLOSC2_ZFP_H
 #define BLOSC2_ZFP_H
-#include "context.h"
+#include "zfp-private.h"
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-int blosc2_zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+
+int zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                             uint8_t meta, blosc2_cparams *cparams, const void* chunk);
 
-int blosc2_zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+int zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                               uint8_t meta, blosc2_dparams *dparams, const void* chunk);
 
-int blosc2_zfp_prec_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+int zfp_prec_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                             uint8_t meta, blosc2_cparams *cparams, const void* chunk);
 
-int blosc2_zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+int zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                               uint8_t meta, blosc2_dparams *dparams, const void* chunk);
 
-int blosc2_zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+int zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                              uint8_t meta, blosc2_cparams *cparams, const void* chunk);
 
-int blosc2_zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+int zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                                uint8_t meta, blosc2_dparams *dparams, const void* chunk);
+
+int zfp_getcell(blosc2_context *context, const uint8_t *block, int32_t cbytes, uint8_t *dest, int32_t destsize);
+
 
 #if defined (__cplusplus)
 }

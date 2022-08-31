@@ -72,7 +72,8 @@ cmake_minimum_required(VERSION 3.16.3)
 if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.4)
   cmake_policy(SET CMP0063 NEW)
 endif()
-project(blosc LANGUAGES C)
+# The project can have ASM (zstd 1.5.2 is starting to use it)
+project(blosc LANGUAGES C ASM)
 
 # parse the full version numbers from blosc.h
 file(READ include/blosc2.h _blosc_h_contents)
@@ -167,7 +168,7 @@ if(NOT DEACTIVATE_ZLIB)
 endif()
 
 if(HAVE_ZLIB_NG)
-    set(ZLIB_NG_DIR "zlib-ng-2.0.5")  # update to the actual included version
+    set(ZLIB_NG_DIR "zlib-ng-2.0.6")  # update to the actual included version
     add_definitions(-DZLIB_COMPAT)
     set(ZLIB_COMPAT TRUE)
     set(SKIP_INSTALL_ALL TRUE)

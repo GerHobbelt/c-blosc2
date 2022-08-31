@@ -1,28 +1,26 @@
 #include "blosc2.h"
+#include "frame.h"
+#include "blosc2/codecs-registry.h"
 #include "zfp.h"
-#include "zfp-private.h"
 #include "blosc2-zfp.h"
 #include <math.h>
+#include "context.h"
+#include "assert.h"
 
-int blosc2_zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
-                            int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk) {
+int zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
+                     int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk) {
+    BLOSC_UNUSED_PARAM(chunk);
     ZFP_ERROR_NULL(input);
     ZFP_ERROR_NULL(output);
     ZFP_ERROR_NULL(cparams);
 
     double tol = (int8_t) meta;
-/*
-    printf("\n input \n");
-    for (int i = 0; i < input_len; i++) {
-        printf("%u, ", input[i]);
-    }
-*/
     int8_t ndim;
     int64_t *shape = malloc(8 * sizeof(int64_t));
     int32_t *chunkshape = malloc(8 * sizeof(int32_t));
     int32_t *blockshape = malloc(8 * sizeof(int32_t));
     uint8_t *smeta;
-    uint32_t smeta_len;
+    int32_t smeta_len;
     if (blosc2_meta_get(cparams->schunk, "caterva", &smeta, &smeta_len) < 0) {
         printf("Blosc error");
         free(shape);
@@ -123,8 +121,8 @@ int blosc2_zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *ou
     return (int) zfpsize;
 }
 
-int blosc2_zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
-                              int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk) {
+int zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
+                       int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk) {
     ZFP_ERROR_NULL(input);
     ZFP_ERROR_NULL(output);
     ZFP_ERROR_NULL(dparams);
@@ -139,7 +137,7 @@ int blosc2_zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *
     int32_t *chunkshape = malloc(8 * sizeof(int32_t));
     int32_t *blockshape = malloc(8 * sizeof(int32_t));
     uint8_t *smeta;
-    uint32_t smeta_len;
+    int32_t smeta_len;
     if (blosc2_meta_get(dparams->schunk, "caterva", &smeta, &smeta_len) < 0) {
         printf("Blosc error");
         free(shape);
@@ -217,24 +215,19 @@ int blosc2_zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *
     return (int) output_len;
 }
 
-int blosc2_zfp_prec_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
-                            int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk) {
+int zfp_prec_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
+                      int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk) {
+    BLOSC_UNUSED_PARAM(chunk);
     ZFP_ERROR_NULL(input);
     ZFP_ERROR_NULL(output);
     ZFP_ERROR_NULL(cparams);
 
-/*
-    printf("\n input \n");
-    for (int i = 0; i < input_len; i++) {
-        printf("%u, ", input[i]);
-    }
-*/
     int8_t ndim;
     int64_t *shape = malloc(8 * sizeof(int64_t));
     int32_t *chunkshape = malloc(8 * sizeof(int32_t));
     int32_t *blockshape = malloc(8 * sizeof(int32_t));
     uint8_t *smeta;
-    uint32_t smeta_len;
+    int32_t smeta_len;
     if (blosc2_meta_get(cparams->schunk, "caterva", &smeta, &smeta_len) < 0) {
         printf("Blosc error");
         free(shape);
@@ -360,8 +353,8 @@ int blosc2_zfp_prec_compress(const uint8_t *input, int32_t input_len, uint8_t *o
     return (int) zfpsize;
 }
 
-int blosc2_zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
-                              int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk) {
+int zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
+                        int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk) {
     ZFP_ERROR_NULL(input);
     ZFP_ERROR_NULL(output);
     ZFP_ERROR_NULL(dparams);
@@ -374,7 +367,7 @@ int blosc2_zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t 
     int32_t *chunkshape = malloc(8 * sizeof(int32_t));
     int32_t *blockshape = malloc(8 * sizeof(int32_t));
     uint8_t *smeta;
-    uint32_t smeta_len;
+    int32_t smeta_len;
     if (blosc2_meta_get(dparams->schunk, "caterva", &smeta, &smeta_len) < 0) {
         printf("Blosc error");
         free(shape);
@@ -478,25 +471,20 @@ int blosc2_zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t 
     return (int) output_len;
 }
 
-int blosc2_zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
-                             int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk) {
+int zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
+                      int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk) {
+    BLOSC_UNUSED_PARAM(chunk);
     ZFP_ERROR_NULL(input);
     ZFP_ERROR_NULL(output);
     ZFP_ERROR_NULL(cparams);
 
     double ratio = (double) meta / 100.0;
-/*
-    printf("\n input \n");
-    for (int i = 0; i < input_len; i++) {
-        printf("%u, ", input[i]);
-    }
-*/
     int8_t ndim;
     int64_t *shape = malloc(8 * sizeof(int64_t));
     int32_t *chunkshape = malloc(8 * sizeof(int32_t));
     int32_t *blockshape = malloc(8 * sizeof(int32_t));
     uint8_t *smeta;
-    uint32_t smeta_len;
+    int32_t smeta_len;
     if (blosc2_meta_get(cparams->schunk, "caterva", &smeta, &smeta_len) < 0) {
         printf("Blosc error");
         free(shape);
@@ -526,6 +514,7 @@ int blosc2_zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *o
             break;
         default:
             printf("\n ZFP is not available for this typesize \n");
+            return 0;
     }
     double rate = ratio * typesize * 8;     // convert from output size / input size to output bits per input value
     uint cellsize = 1u << (2 * ndim);
@@ -612,8 +601,8 @@ int blosc2_zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *o
     return (int) zfpsize;
 }
 
-int blosc2_zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
-                              int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk) {
+int zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
+                        int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk) {
     ZFP_ERROR_NULL(input);
     ZFP_ERROR_NULL(output);
     ZFP_ERROR_NULL(dparams);
@@ -628,7 +617,7 @@ int blosc2_zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t 
     int32_t *chunkshape = malloc(8 * sizeof(int32_t));
     int32_t *blockshape = malloc(8 * sizeof(int32_t));
     uint8_t *smeta;
-    uint32_t smeta_len;
+    int32_t smeta_len;
     if (blosc2_meta_get(dparams->schunk, "caterva", &smeta, &smeta_len) < 0) {
         printf("Blosc error");
         free(shape);
@@ -659,7 +648,7 @@ int blosc2_zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t 
             free(blockshape);
             return 0;
     }
-    double rate = ratio * typesize * 8;     // convert from output size / input size to output bits per input value
+    double rate = ratio * (double) typesize * 8;     // convert from output size / input size to output bits per input value
     zfp = zfp_stream_open(NULL);
     zfp_stream_set_rate(zfp, rate, type, ndim, zfp_false);
 
@@ -706,3 +695,163 @@ int blosc2_zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t 
     return (int) output_len;
 }
 
+
+int zfp_getcell(blosc2_context *context, const uint8_t *block, int32_t cbytes, uint8_t *dest, int32_t destsize) {
+    bool meta = false;
+    uint8_t ndim;
+    int32_t blockshape[4];      // ZFP only works for caterva datasets
+    for (int nmetalayer = 0; nmetalayer < context->schunk->nmetalayers; nmetalayer++) {
+        if (strcmp("caterva", context->schunk->metalayers[nmetalayer]->name) == 0) {
+            meta = true;
+            uint8_t *pmeta = context->schunk->metalayers[nmetalayer]->content;
+            ndim = (int8_t) pmeta[2];
+            pmeta += (6 + ndim * 9 + ndim * 5);
+            for (int8_t i = 0; (uint8_t) i < ndim; i++) {
+                pmeta += 1;
+                swap_store(blockshape + i, pmeta, sizeof(int32_t));
+                pmeta += sizeof(int32_t);
+            }
+        }
+    }
+    if (!meta) {
+        return -1;
+    }
+    assert(ndim <= 4);
+    int64_t cell_start_ndim[4], cell_ind_ndim[4], ncell_ndim[4], ind_strides[4], cell_strides[4];
+    int64_t cell_ind, ncell;
+    int cellshape = 4;
+    index_unidim_to_multidim(ndim, blockshape, context->zfp_cell_start, cell_start_ndim);
+    for (int i = 0; i < ndim; ++i) {
+        cell_ind_ndim[i] = cell_start_ndim[i] % cellshape;
+        ncell_ndim[i] = cell_start_ndim[i] / cellshape;
+    }
+    ind_strides[ndim - 1] = cell_strides[ndim - 1] = 1;
+    for (int i = ndim - 2; i >= 0; --i) {
+        ind_strides[i] = cellshape * ind_strides[i + 1];
+        cell_strides[i] = ((blockshape[i + 1] - 1) / cellshape + 1) * cell_strides[i + 1];
+    }
+    index_multidim_to_unidim(cell_ind_ndim, (int8_t) ndim, ind_strides, &cell_ind);
+    index_multidim_to_unidim(ncell_ndim, (int8_t) ndim, cell_strides, &ncell);
+    int cell_nitems = (int) (1u << (2 * ndim));
+    if ((context->zfp_cell_nitems > cell_nitems) || ((cell_ind + context->zfp_cell_nitems) > cell_nitems)) {
+        return 0;
+    }
+
+    // Get the ZFP stream
+    zfp_type type;     /* array scalar type */
+    zfp_stream *zfp;   /* compressed stream */
+    bitstream *stream; /* bit stream to write to or read from */
+    int32_t typesize = context->typesize;
+    zfp = zfp_stream_open(NULL);
+
+    switch (typesize) {
+        case sizeof(float):
+            type = zfp_type_float;
+            break;
+        case sizeof(double):
+            type = zfp_type_double;
+            break;
+        default:
+            printf("\n ZFP is not available for this typesize \n");
+            return 0;
+    }
+    uint8_t compmeta = context->compcode_meta;                                 // access to compressed chunk header
+    double rate = (double) (compmeta * typesize * 8) /
+                  100.0;     // convert from output size / input size to output bits per input value
+    zfp_stream_set_rate(zfp, rate, type, ndim, zfp_false);
+
+    stream = stream_open((void *) block, cbytes);
+    zfp_stream_set_bit_stream(zfp, stream);
+    zfp_stream_rewind(zfp);
+
+    // Check that ncell is a valid index
+    int ncells = (int) ((cbytes * 8) / zfp->maxbits);
+    if (ncell >= ncells) {
+        BLOSC_TRACE_ERROR("Invalid cell index");
+        return -1;
+    }
+
+    // Position the stream at the ncell bit offset for reading
+    stream_rseek(zfp->stream, (size_t) (ncell * zfp->maxbits));
+
+    // Get the cell
+    size_t zfpsize;
+    uint8_t *cell = malloc(cell_nitems * typesize);
+    switch (ndim) {
+        case 1:
+            switch (type) {
+                case zfp_type_float:
+                    zfpsize = zfp_decode_block_float_1(zfp, (float *) cell);
+                    break;
+                case zfp_type_double:
+                    zfpsize = zfp_decode_block_double_1(zfp, (double *) cell);
+                    break;
+                default:
+                    printf("\n ZFP is not available for this typesize \n");
+                    zfp_stream_close(zfp);
+                    stream_close(stream);
+                    return 0;
+            }
+            break;
+        case 2:
+            switch (type) {
+                case zfp_type_float:
+                    zfpsize = zfp_decode_block_float_2(zfp, (float *) cell);
+                    break;
+                case zfp_type_double:
+                    zfpsize = zfp_decode_block_double_2(zfp, (double *) cell);
+                    break;
+                default:
+                    printf("\n ZFP is not available for this typesize \n");
+                    zfp_stream_close(zfp);
+                    stream_close(stream);
+                    return 0;
+            }
+            break;
+        case 3:
+            switch (type) {
+                case zfp_type_float:
+                    zfpsize = zfp_decode_block_float_3(zfp, (float *) cell);
+                    break;
+                case zfp_type_double:
+                    zfpsize = zfp_decode_block_double_3(zfp, (double *) cell);
+                    break;
+                default:
+                    printf("\n ZFP is not available for this typesize \n");
+                    zfp_stream_close(zfp);
+                    stream_close(stream);
+                    return 0;
+            }
+            break;
+        case 4:
+            switch (type) {
+                case zfp_type_float:
+                    zfpsize = zfp_decode_block_float_4(zfp, (float *) cell);
+                    break;
+                case zfp_type_double:
+                    zfpsize = zfp_decode_block_double_4(zfp, (double *) cell);
+                    break;
+                default:
+                    printf("\n ZFP is not available for this typesize \n");
+                    zfp_stream_close(zfp);
+                    stream_close(stream);
+                    return 0;
+            }
+            break;
+        default:
+            printf("\n ZFP is not available for this number of dims \n");
+            return 0;
+    }
+    memcpy(dest, &cell[cell_ind * typesize], context->zfp_cell_nitems * typesize);
+    zfp_stream_close(zfp);
+    stream_close(stream);
+    free(cell);
+
+    if ((zfpsize < 0) || ((int32_t)zfpsize > (destsize * 8)) || ((int32_t)zfpsize > (cell_nitems * typesize * 8)) ||
+        ((context->zfp_cell_nitems * typesize * 8) > (int32_t)zfpsize)) {
+        BLOSC_TRACE_ERROR("ZFP error or small destsize");
+        return -1;
+    }
+
+    return (int) (context->zfp_cell_nitems * typesize);
+}

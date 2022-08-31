@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-  int32_t i = 0, dsize = 0, filter = BLOSC_BITSHUFFLE;
+  int32_t i = 0, dsize = 0;
   int32_t nchunk = 0;
 
   blosc_init();
@@ -19,7 +19,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   dparams.nthreads = 1;
 
   /* Create a super-chunk backed by an in-memory frame */
-  blosc2_schunk* schunk = blosc2_schunk_from_buffer((uint8_t *) data, size, false);
+  blosc2_schunk* schunk = blosc2_schunk_from_buffer((uint8_t *) data, (int64_t)size, false);
   if (schunk == NULL) {
     blosc_destroy();
     return 0;

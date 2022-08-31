@@ -10,7 +10,7 @@
 #include <blosc2/blosc2-common.h>
 
 
-static void index_unidim_to_multidim(int8_t ndim, int64_t *shape, int64_t i, int64_t *index) {
+static void index_unidim_to_multidim(int8_t ndim, const int64_t *shape, int64_t i, int64_t *index) {
     int64_t strides[NDMEAN_MAX_DIM];
     strides[0] = 1;
     if (ndim > 1) {
@@ -67,19 +67,20 @@ static void swap_store(void *dest, const void *pa, int size) {
     memcpy(dest, pa2_, size);
 }
 
-static int32_t deserialize_meta(uint8_t *smeta, uint32_t smeta_len, int8_t *ndim, int64_t *shape,
+static int32_t deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
                          int32_t *chunkshape, int32_t *blockshape) {
+    BLOSC_UNUSED_PARAM(smeta_len);
     uint8_t *pmeta = smeta;
 
     // Check that we have an array with 5 entries (version, ndim, shape, chunkshape, blockshape)
     pmeta += 1;
 
     // version entry
-    int8_t version = pmeta[0];  // positive fixnum (7-bit positive integer)
+    // int8_t version = (int8_t) pmeta[0];  // positive fixnum (7-bit positive integer) commented to avoid warning
     pmeta += 1;
 
     // ndim entry
-    *ndim = pmeta[0];
+    *ndim = (int8_t) pmeta[0];
     int8_t ndim_aux = *ndim;  // positive fixnum (7-bit positive integer)
     pmeta += 1;
 
@@ -112,8 +113,8 @@ static int32_t deserialize_meta(uint8_t *smeta, uint32_t smeta_len, int8_t *ndim
         swap_store(blockshape + i, pmeta, sizeof(int32_t));
         pmeta += sizeof(int32_t);
     }
-    uint32_t slen = (uint32_t)(pmeta - smeta);
-    return 0;
+    int32_t slen = (int32_t)(pmeta - smeta);
+    return slen;
 }
 
 int ndmean_encoder(const uint8_t* input, uint8_t* output, int32_t length, int8_t meta, blosc2_cparams* cparams) {
@@ -174,7 +175,7 @@ int ndmean_encoder(const uint8_t* input, uint8_t* output, int32_t length, int8_t
     double * ip_double = (double *) ip;
     uint8_t* op = (uint8_t *) output;
     uint8_t* op_limit = op + length;
-    int64_t cell_length = 0;
+    int64_t cell_length;
     float mean_float = 0;
     double mean_double = 0;
 
@@ -206,7 +207,7 @@ int ndmean_encoder(const uint8_t* input, uint8_t* output, int32_t length, int8_t
     for (int cell_ind = 0; cell_ind < ncells; cell_ind++) {      // for each cell
         index_unidim_to_multidim(ndim, i_shape, cell_ind, ii);
         uint32_t orig = 0;
-        int64_t nd_aux = cellshape[0];
+        int64_t nd_aux = (int64_t) (cellshape[0]);
         for (int i = ndim - 1; i >= 0; i--) {
             orig += ii[i] * nd_aux;
             nd_aux *= blockshape[i];
@@ -376,7 +377,7 @@ int ndmean_decoder(const uint8_t* input, uint8_t* output, int32_t length, int8_t
         }
         index_unidim_to_multidim(ndim, i_shape, cell_ind, ii);
         uint32_t orig = 0;
-        int64_t nd_aux = cellshape[0];
+        int64_t nd_aux = (int64_t) (cellshape[0]);
         for (int i = ndim - 1; i >= 0; i--) {
             orig += ii[i] * nd_aux;
             nd_aux *= blockshape[i];

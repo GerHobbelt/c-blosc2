@@ -26,7 +26,7 @@ static int test_zfp_rate_float(blosc2_schunk* schunk) {
         printf("Error: This test is only for doubles.\n");
         return 0;
     }
-    int nchunks = schunk->nchunks;
+    int64_t nchunks = schunk->nchunks;
     int32_t chunksize = (int32_t) (schunk->chunksize);
     float *data_in = malloc(chunksize);
     int decompressed;
@@ -64,12 +64,7 @@ static int test_zfp_rate_float(blosc2_schunk* schunk) {
             printf("Error decompressing chunk \n");
             return -1;
         }
-/*
-        printf("\n chunk \n");
-        for (int i = 0; i < (chunksize / cparams.typesize); i++) {
-            printf("%f, ", data_in[i]);
-        }
-*/
+
         /* Compress with clevel=5 and shuffle active  */
         csize = blosc2_compress_ctx(cctx, data_in, chunksize, data_out, chunksize + BLOSC_MAX_OVERHEAD);
         if (csize == 0) {
@@ -81,34 +76,12 @@ static int test_zfp_rate_float(blosc2_schunk* schunk) {
         }
         csize_f += csize;
 
-
         /* Decompress  */
         dsize = blosc2_decompress_ctx(dctx, data_out, chunksize + BLOSC_MAX_OVERHEAD, data_dest, chunksize);
         if (dsize <= 0) {
             printf("Decompression error.  Error code: %" PRId64 "\n", dsize);
             return (int) dsize;
         }
-/*
-        printf("\n dest \n");
-        for (int i = 0; i < (chunksize / cparams.typesize); i++) {
-            printf("%f, ", data_dest[i]);
-        }
-
-        double tolerance = 0.1;
-        for (int i = 0; i < (chunksize / cparams.typesize); i++) {
-            if ((data_in[i] == 0) || (data_dest[i] == 0)) {
-                if (fabsf(data_in[i] - data_dest[i]) > tolerance) {
-                    printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
-                    printf("\n Decompressed data differs from original!\n");
-                    return -1;
-                }
-            } else if (fabsf(data_in[i] - data_dest[i]) > tolerance * fmaxf(fabsf(data_in[i]), fabsf(data_dest[i]))) {
-                printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
-                printf("\n Decompressed data differs from original!\n");
-                return -1;
-            }
-        }
-    */
     }
     csize_f = csize_f / nchunks;
 
@@ -129,7 +102,7 @@ static int test_zfp_rate_double(blosc2_schunk* schunk) {
         printf("Error: This test is only for doubles.\n");
         return 0;
     }
-    int nchunks = schunk->nchunks;
+    int64_t nchunks = schunk->nchunks;
     int32_t chunksize = (int32_t) (schunk->chunksize);
     double *data_in = malloc(chunksize);
     int decompressed;
@@ -167,12 +140,7 @@ static int test_zfp_rate_double(blosc2_schunk* schunk) {
             printf("Error decompressing chunk \n");
             return -1;
         }
-/*
-        printf("\n chunk \n");
-        for (int i = 0; i < (chunksize / cparams.typesize); i++) {
-            printf("%f, ", data_in[i]);
-        }
-*/
+
         /* Compress with clevel=5 and shuffle active  */
         csize = blosc2_compress_ctx(cctx, data_in, chunksize, data_out, chunksize + BLOSC_MAX_OVERHEAD);
         if (csize == 0) {
@@ -184,34 +152,12 @@ static int test_zfp_rate_double(blosc2_schunk* schunk) {
         }
         csize_f += csize;
 
-
         /* Decompress  */
         dsize = blosc2_decompress_ctx(dctx, data_out, chunksize + BLOSC_MAX_OVERHEAD, data_dest, chunksize);
         if (dsize <= 0) {
             printf("Decompression error.  Error code: %" PRId64 "\n", dsize);
             return (int) dsize;
         }
-/*
-        printf("\n dest \n");
-        for (int i = 0; i < (chunksize / cparams.typesize); i++) {
-            printf("%f, ", data_dest[i]);
-        }
-
-        double tolerance = 0.1;
-        for (int i = 0; i < (chunksize / cparams.typesize); i++) {
-            if ((data_in[i] == 0) || (data_dest[i] == 0)) {
-                if (fabs(data_in[i] - data_dest[i]) > tolerance) {
-                    printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
-                    printf("\n Decompressed data differs from original!\n");
-                    return -1;
-                }
-            } else if (fabs(data_in[i] - data_dest[i]) > tolerance * fmax(fabs(data_in[i]), fabs(data_dest[i]))) {
-                printf("i: %d, data %f, dest %f", i, data_in[i], data_dest[i]);
-                printf("\n Decompressed data differs from original!\n");
-                return -1;
-            }
-        }
-    */
     }
 
     csize_f = csize_f / nchunks;
