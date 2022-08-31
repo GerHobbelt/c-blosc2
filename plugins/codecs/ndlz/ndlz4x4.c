@@ -21,6 +21,7 @@
 #include "ndlz4x4.h"
 #include "ndlz.h"
 #include "xxhash.h"
+#include "../plugins/plugin_utils.h"
 
 
 /*
@@ -522,7 +523,7 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   uint8_t* buffercpy;
   uint8_t local_buffer[16];
   uint8_t token;
-  if (NDLZ_UNEXPECT_CONDITIONAL(input_len <= 0)) {
+  if (NDLZ_UNEXPECT_CONDITIONAL(input_len < 8)) {
     return 0;
   }
 
@@ -540,6 +541,9 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   eshape[0] = ((blockshape[0] + 3) / 4) * 4;
   eshape[1] = ((blockshape[1] + 3) / 4) * 4;
 
+  if (NDLZ_UNEXPECT_CONDITIONAL(output_len < blockshape[0] * blockshape[1])) {
+    return 0;
+  }
   memset(op, 0, blockshape[0] * blockshape[1]);
 
   uint32_t i_stop[2];
@@ -581,7 +585,7 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
         buffercpy = cell_aux;
         memset(buffercpy, *ip, 16);
         ip++;
-      } else if ((token >= 224) && (token <= 255)) { // three rows match
+      } else if (token >= 224) { // three rows match
         buffercpy = local_buffer;
         uint16_t offset = *((uint16_t*) ip);
         offset += 3;

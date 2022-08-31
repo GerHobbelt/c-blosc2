@@ -257,7 +257,7 @@ void *new_header_frame(blosc2_schunk *schunk, blosc2_frame_s *frame) {
 
   // Now, deal with metalayers
   uint16_t nmetalayers = schunk->nmetalayers;
-  if (nmetalayers < 0 || nmetalayers > BLOSC2_MAX_METALAYERS) {
+  if (nmetalayers > BLOSC2_MAX_METALAYERS) {
     return NULL;
   }
 

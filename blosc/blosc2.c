@@ -43,7 +43,11 @@
   #include <ippdc.h>
 #endif
 #if defined(HAVE_ZLIB_NG)
+#ifdef ZLIB_COMPAT
   #include "zlib.h"
+#else
+  #include "zlib-ng.h"
+#endif
 #elif defined(HAVE_ZLIB)
   #include "zlib.h"
 #endif /*  HAVE_MINIZ */
@@ -432,7 +436,13 @@ static int zlib_wrap_compress(const char* input, size_t input_length,
                               char* output, size_t maxout, int clevel) {
   int status;
   uLongf cl = (uLongf)maxout;
+#ifdef ZLIB_COMPAT
   status = compress2(
+#elif defined(HAVE_ZLIB_NG)
+  status = zng_compress2(
+#else
+  status = compress2(
+#endif
       (Bytef*)output, &cl, (Bytef*)input, (uLong)input_length, clevel);
   if (status != Z_OK) {
     return 0;
@@ -444,7 +454,13 @@ static int zlib_wrap_decompress(const char* input, size_t compressed_length,
                                 char* output, size_t maxout) {
   int status;
   uLongf ul = (uLongf)maxout;
+#ifdef ZLIB_COMPAT
   status = uncompress(
+#elif defined(HAVE_ZLIB_NG)
+  status = zng_uncompress(
+#else
+  status = uncompress(
+#endif
       (Bytef*)output, &ul, (Bytef*)input, (uLong)compressed_length);
   if (status != Z_OK) {
     return 0;
@@ -1505,12 +1521,14 @@ static int blosc_d(
       BLOSC_ERROR_NULL(chunkpath, BLOSC2_ERROR_MEMORY_ALLOC);
       sprintf(chunkpath, "%s/%08X.chunk", frame->urlpath, nchunk);
       fp = io_cb->open(chunkpath, "rb", context->schunk->storage->io->params);
+      BLOSC_ERROR_NULL(fp, BLOSC2_ERROR_FILE_OPEN);
       free(chunkpath);
       // The offset of the block is src_offset
       io_cb->seek(fp, src_offset, SEEK_SET);
     }
     else {
       fp = io_cb->open(urlpath, "rb", context->schunk->storage->io->params);
+      BLOSC_ERROR_NULL(fp, BLOSC2_ERROR_FILE_OPEN);
       // The offset of the block is src_offset
       io_cb->seek(fp, chunk_offset + src_offset, SEEK_SET);
     }
@@ -2316,7 +2334,7 @@ int blosc_compress_context(blosc2_context* context) {
   else {
     // Check whether we have a run for the whole chunk
     int start_csizes = context->header_overhead + 4 * context->nblocks;
-    if (ntbytes == start_csizes + nstreams * sizeof(int32_t)) {
+    if (ntbytes == (int)(start_csizes + nstreams * sizeof(int32_t))) {
       // The streams are all zero runs (by construction).  Encode it...
       context->dest[BLOSC2_CHUNK_BLOSC2_FLAGS] |= BLOSC2_SPECIAL_ZERO << 4;
       // ...and assign the new chunk length
@@ -2875,8 +2893,8 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
       context->header_overhead + j * bsize : sw32_(context->bstarts + j);
 
     int32_t cbytes = blosc_d(context->serial_context, bsize, leftoverblock, memcpyed,
-                         src, srcsize, src_offset, j,
-                         tmp2, 0, scontext->tmp, scontext->tmp3);
+                             src, srcsize, src_offset, j,
+                             tmp2, 0, scontext->tmp, scontext->tmp3);
     if (cbytes < 0) {
       ntbytes = cbytes;
       break;
@@ -3348,7 +3366,13 @@ int blosc_get_complib_info(const char* compname, char** complib, char** version)
   }
 #if defined(HAVE_ZLIB)
   else if (clibcode == BLOSC_ZLIB_LIB) {
+#ifdef ZLIB_COMPAT
     clibversion = ZLIB_VERSION;
+#elif defined(HAVE_ZLIB_NG)
+    clibversion = ZLIBNG_VERSION;
+#else
+    clibversion = ZLIB_VERSION;
+#endif
   }
 #endif /* HAVE_ZLIB */
 #if defined(HAVE_ZSTD)
@@ -3953,7 +3977,7 @@ int register_filter_private(blosc2_filter *filter) {
         return BLOSC2_ERROR_FAILURE;
     }
     if (filter->id > BLOSC2_USER_REGISTERED_FILTERS_STOP) {
-        BLOSC_TRACE_ERROR("The id must be leather or equal than %d", BLOSC2_USER_REGISTERED_FILTERS_STOP);
+        BLOSC_TRACE_ERROR("The id must be lower or equal than %d", BLOSC2_USER_REGISTERED_FILTERS_STOP);
         return BLOSC2_ERROR_FAILURE;
     }
 
@@ -3974,7 +3998,7 @@ int register_filter_private(blosc2_filter *filter) {
 
 int blosc2_register_filter(blosc2_filter *filter) {
   if (filter->id < BLOSC2_USER_REGISTERED_FILTERS_START) {
-    BLOSC_TRACE_ERROR("The id must be greater or equal than %d", BLOSC2_USER_REGISTERED_FILTERS_START);
+    BLOSC_TRACE_ERROR("The id must be greater or equal to %d", BLOSC2_USER_REGISTERED_FILTERS_START);
     return BLOSC2_ERROR_FAILURE;
   }
 
@@ -3995,7 +4019,7 @@ int register_codec_private(blosc2_codec *codec) {
         return BLOSC2_ERROR_FAILURE;
     }
     if (codec->compcode > BLOSC2_USER_REGISTERED_CODECS_STOP) {
-        BLOSC_TRACE_ERROR("The id must be leather or equal than %d", BLOSC2_USER_REGISTERED_CODECS_STOP);
+        BLOSC_TRACE_ERROR("The id must be lower or equal to %d", BLOSC2_USER_REGISTERED_CODECS_STOP);
         return BLOSC2_ERROR_FAILURE;
     }
 

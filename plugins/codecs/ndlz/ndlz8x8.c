@@ -21,6 +21,7 @@
 #include "ndlz8x8.h"
 #include "ndlz.h"
 #include "xxhash.h"
+#include "../plugins/plugin_utils.h"
 
 
 /*
@@ -104,8 +105,6 @@ int ndlz8_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
   uint32_t tab_pair[1U << 12U] = {0};
   uint32_t update_triple[6] = {0};
   uint32_t update_pair[7] = {0};
-  uint32_t triple_match[3] = {0};
-  uint32_t pair_matches[5] = {0};
 
   // Minimum cratios before issuing and _early giveup_
   // Remind that ndlz is not meant for cratios <= 2 (too costly to decompress)
@@ -233,7 +232,6 @@ int ndlz8_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
           bool literal = true;
 
           // rows triples matches
-          triple_match[0] = 0;
           for (int i = 0; i < 6; i++) {
             int triple_start = i * cell_shape;
             hval = XXH32(&buf_cell[triple_start], 24, 1);        // calculate triple hash
@@ -278,7 +276,6 @@ int ndlz8_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
           }
 
           // rows pairs matches
-          pair_matches[0] = 0;
           for (int i = 0; i < 7; i++) {
             int pair_start = i * cell_shape;
             hval = XXH32(&buf_cell[pair_start], 16, 1);        // calculate rows pair hash
@@ -440,8 +437,8 @@ int ndlz8_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   uint8_t* ip_limit = ip + input_len;
   uint8_t* op = (uint8_t*)output;
   uint8_t ndim;
-  uint32_t blockshape[2];
-  uint32_t eshape[2];
+  int32_t blockshape[2];
+  int32_t eshape[2];
   uint8_t* buffercpy;
   uint8_t token;
   if (NDLZ_UNEXPECT_CONDITIONAL(input_len < 8)) {
@@ -462,18 +459,21 @@ int ndlz8_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   eshape[0] = ((blockshape[0] + 7) / cell_shape) * cell_shape;
   eshape[1] = ((blockshape[1] + 7) / cell_shape) * cell_shape;
 
+  if (NDLZ_UNEXPECT_CONDITIONAL(output_len < blockshape[0] * blockshape[1])) {
+    return 0;
+  }
   memset(op, 0, blockshape[0] * blockshape[1]);
 
-  uint32_t i_stop[2];
+  int32_t i_stop[2];
   for (int i = 0; i < 2; ++i) {
     i_stop[i] = eshape[i] / cell_shape;
   }
 
 
   /* main loop */
-  uint32_t ii[2];
-  uint32_t padding[2];
-  uint32_t ind;
+  int32_t ii[2];
+  int32_t padding[2];
+  int32_t ind = 0;
   uint8_t* local_buffer = malloc(cell_size);
   uint8_t* cell_aux = malloc(cell_size);
   for (ii[0] = 0; ii[0] < i_stop[0]; ++ii[0]) {
@@ -545,14 +545,14 @@ int ndlz8_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
       }
 
       uint32_t orig = ii[0] * cell_shape * blockshape[1] + ii[1] * cell_shape;
-      for (uint32_t i = 0; i < (uint32_t) cell_shape; i++) {
+      for (int32_t i = 0; i < (int32_t) cell_shape; i++) {
         if (i < padding[0]) {
           ind = orig + i * blockshape[1];
           memcpy(&op[ind], buffercpy, padding[1]);
         }
         buffercpy += padding[1];
       }
-      if (ind > (uint32_t) output_len) {
+      if (ind > output_len) {
         printf("Output size is bigger than max \n");
         free(local_buffer);
         free(cell_aux);
@@ -569,7 +569,7 @@ int ndlz8_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
     printf("Output size is not compatible with embedded blockshape \n");
     return 0;
   }
-  if (ind > (uint32_t) output_len) {
+  if (ind > output_len) {
     printf("Output size is bigger than max \n");
     return 0;
   }
