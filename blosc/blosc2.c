@@ -893,7 +893,9 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
           delta_encoder(src, offset, bsize, typesize, _src, _dest);
           break;
         case BLOSC_TRUNC_PREC:
-          truncate_precision(filters_meta[i], typesize, bsize, _src, _dest);
+          if (truncate_precision(filters_meta[i], typesize, bsize, _src, _dest) < 0) {
+            return NULL;
+          }
           break;
         default:
           if (filters[i] != BLOSC_NOFILTER) {
@@ -1287,7 +1289,6 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
           if (filters[i] != BLOSC_NOFILTER) {
             BLOSC_TRACE_ERROR("Filter %d not handled during decompression.",
                               filters[i]);
-
             errcode = -1;
           }
       }
@@ -2219,6 +2220,10 @@ static int write_compression_header(blosc2_context* context, bool extended_heade
     /* Compression level 0 means buffer to be memcpy'ed */
     context->header_flags |= (uint8_t)BLOSC_MEMCPYED;
   }
+  if (context->sourcesize < BLOSC_MIN_BUFFERSIZE) {
+    /* Buffer is too small.  Try memcpy'ing. */
+    context->header_flags |= (uint8_t)BLOSC_MEMCPYED;
+  }
 
   bool memcpyed = context->header_flags & (uint8_t)BLOSC_MEMCPYED;
   if (extended_header) {
@@ -2282,7 +2287,7 @@ static int write_compression_header(blosc2_context* context, bool extended_heade
 }
 
 
-int blosc_compress_context(blosc2_context* context) {
+static int blosc_compress_context(blosc2_context* context) {
   int ntbytes = 0;
   blosc_timestamp_t last, current;
   bool memcpyed = context->header_flags & (uint8_t)BLOSC_MEMCPYED;
@@ -2644,8 +2649,8 @@ int blosc1_compress(int clevel, int doshuffle, size_t typesize, size_t nbytes,
 
 
 
-int blosc_run_decompression_with_context(blosc2_context* context, const void* src, int32_t srcsize,
-                                         void* dest, int32_t destsize) {
+static int blosc_run_decompression_with_context(blosc2_context* context, const void* src, int32_t srcsize,
+                                                void* dest, int32_t destsize) {
   blosc_header header;
   int32_t ntbytes;
   int rc;

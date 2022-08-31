@@ -91,10 +91,10 @@ extern "C" {
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
 #define BLOSC2_VERSION_MINOR    3    /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.3.0"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2022-08-18 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.3.1"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2022-08-24 #$"    /* date version */
 
 
 /* The maximum number of dimensions for caterva arrays */
@@ -173,8 +173,8 @@ enum {
   //!< Maximum typesize before considering source buffer as a stream of bytes.
   //!< Cannot be larger than 255.
 #endif // BLOSC_H
-  BLOSC_MIN_BUFFERSIZE = 128,
-  //!< Minimum buffer size to be compressed. Cannot be smaller than 66.
+  BLOSC_MIN_BUFFERSIZE = 32,
+  //!< Minimum buffer size to be compressed.
 };
 
 
@@ -210,7 +210,7 @@ enum {
   BLOSC_BITSHUFFLE = 2,  //!< Bit-wise shuffle.
 #endif // BLOSC_H
   BLOSC_DELTA = 3,       //!< Delta filter.
-  BLOSC_TRUNC_PREC = 4,  //!< Truncate precision filter.
+  BLOSC_TRUNC_PREC = 4,  //!< Truncate mantissa precision; positive values in cparams.filters_meta will keep bits; negative values will reduce bits.
   BLOSC_LAST_FILTER = 5, //!< sentinel
   BLOSC_LAST_REGISTERED_FILTER = BLOSC2_GLOBAL_REGISTERED_FILTERS_START + BLOSC2_GLOBAL_REGISTERED_FILTERS - 1,
   //!< Determine the last registered filter. It is used to check if a filter is registered or not.
