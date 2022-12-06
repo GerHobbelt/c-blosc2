@@ -90,11 +90,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    3    /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MINOR    4    /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.3.2.dev"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2022-08-24 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.4.1"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2022-09-16 #$"    /* date version */
 
 
 /* The maximum number of dimensions for caterva arrays */
@@ -1068,8 +1068,8 @@ typedef struct {
 static const blosc2_cparams BLOSC2_CPARAMS_DEFAULTS = {
         BLOSC_BLOSCLZ, 0, 5, 0, 8, 1, 0,
         BLOSC_FORWARD_COMPAT_SPLIT, NULL,
-        .filters={0, 0, 0, 0, 0, BLOSC_SHUFFLE},
-        .filters_meta={0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, BLOSC_SHUFFLE},
+        {0, 0, 0, 0, 0, 0},
         NULL, NULL, NULL, 0};
 
 
@@ -1595,6 +1595,16 @@ BLOSC_EXPORT blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_sto
 BLOSC_EXPORT blosc2_schunk* blosc2_schunk_from_buffer(uint8_t *cframe, int64_t len, bool copy);
 
 /**
+ * @brief Set the private `avoid_cframe_free` field in a frame.
+ *
+ * @param schunk The super-chunk referencing the frame.
+ * @param avoid_cframe_free The value to set in the blosc2_frame_s structure.
+ *
+ * @warning If you set it to `true` you will be responsible of freeing it.
+ */
+void blosc2_schunk_avoid_cframe_free(blosc2_schunk *schunk, bool avoid_cframe_free);
+
+/**
  * @brief Open an existing super-chunk that is on-disk (frame). No in-memory copy is made.
  *
  * @param urlpath The file name.
@@ -1805,14 +1815,14 @@ BLOSC_EXPORT int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchu
                                              bool *needs_free);
 
 /**
- * @brief Fill buffer with schunk slice.
+ * @brief Fill buffer with a schunk slice.
  *
  * @param schunk The super-chunk from where to extract a slice.
- * @param start The coordinates where the slice will begin (0 indexed).
- * @param stop The coordinates where the slice will end.
+ * @param start Index (0-based) where the slice begins.
+ * @param stop The first index (0-based) that is not in the selected slice.
  * @param buffer The buffer where the data will be stored.
  *
- * @warning You must make sure that you have space enough to store the
+ * @warning You must make sure that you have space enough in buffer to store the
  * uncompressed data.
  *
  * @return An error code.
@@ -1823,8 +1833,8 @@ BLOSC_EXPORT int blosc2_schunk_get_slice_buffer(blosc2_schunk *schunk, int64_t s
  * @brief Update a schunk slice from buffer.
  *
  * @param schunk The super-chunk where to set the slice.
- * @param start The coordinates where the slice will begin (0 indexed).
- * @param stop The coordinates where the slice will end.
+ * @param start Index (0-based) where the slice begins.
+ * @param stop The first index (0-based) that is not in the selected slice.
  * @param buffer The buffer containing the data to set.
  *
  *
