@@ -90,11 +90,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    4    /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  4    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MINOR    5    /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.4.4.dev"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2022-10-23 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.5.0"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2022-11-29 #$"    /* date version */
 
 
 /* The maximum number of dimensions for caterva arrays */
@@ -350,10 +350,10 @@ enum {
  */
 #ifndef BLOSC_H
 enum {
-  BLOSC_ALWAYS_SPLIT = 1,
-  BLOSC_NEVER_SPLIT = 2,
-  BLOSC_AUTO_SPLIT = 3,
-  BLOSC_FORWARD_COMPAT_SPLIT = 4,
+  BLOSC_ALWAYS_SPLIT = 0,
+  BLOSC_NEVER_SPLIT = 1,
+  BLOSC_AUTO_SPLIT = 2,
+  BLOSC_FORWARD_COMPAT_SPLIT = 3,
 };
 #endif // BLOSC_H
 
@@ -511,6 +511,9 @@ BLOSC_EXPORT void blosc2_destroy(void);
  *
  * * **BLOSC_NTHREADS=(INTEGER)**: This will call
  * #blosc2_set_nthreads before the compression process starts.
+ *
+ * * **BLOSC_SPLITMODE=(ALWAYS_SPLIT | NEVER_SPLIT | AUTO_SPLIT | FORWARD_COMPAT_SPLIT)**:
+ * This will call #blosc1_set_splitmode() before the compression process starts.
  *
  * * **BLOSC_BLOCKSIZE=(INTEGER)**: This will call
  * #blosc1_set_blocksize before the compression process starts.
@@ -977,11 +980,11 @@ typedef struct {
  */
 typedef struct {
   void *user_data;  // user-provided info (optional)
-  const uint8_t *in;  // the input buffer
-  uint8_t *out;  // the output buffer
-  int32_t out_size;  // the output size (in bytes)
-  int32_t out_typesize;  // the output typesize
-  int32_t out_offset; // offset to reach the start of the output buffer
+  const uint8_t *input;  // the input buffer
+  uint8_t *output;  // the output buffer
+  int32_t output_size;  // the output size (in bytes)
+  int32_t output_typesize;  // the output typesize
+  int32_t output_offset; // offset to reach the start of the output buffer
   int64_t nchunk;  // the current nchunk in associated schunk (if exists; if not -1)
   int32_t nblock;  // the current nblock in associated chunk
   int32_t tid;  // thread id
@@ -996,8 +999,8 @@ typedef struct {
  */
 typedef struct {
   void *user_data;  // user-provided info (optional)
-  const uint8_t *in;  // the input buffer
-  uint8_t *out;  // the output buffer
+  const uint8_t *input;  // the input buffer
+  uint8_t *output;  // the output buffer
   int32_t size;  // the input size (in bytes)
   int32_t typesize;  // the input typesize
   int32_t offset;  // offset to reach the start of the input buffer
@@ -1101,6 +1104,11 @@ static const blosc2_dparams BLOSC2_DPARAMS_DEFAULTS = {1, NULL, NULL, NULL};
  * @param cparams The blosc2_cparams struct with the compression parameters.
  *
  * @return A pointer to the new context. NULL is returned if this fails.
+ *
+ * @note This support the same environment variables than #blosc2_compress
+ * for overriding the programmatic compression values.
+ *
+ * @sa blosc2_compress
  */
 BLOSC_EXPORT blosc2_context* blosc2_create_cctx(blosc2_cparams cparams);
 
@@ -1110,6 +1118,12 @@ BLOSC_EXPORT blosc2_context* blosc2_create_cctx(blosc2_cparams cparams);
  * @param dparams The blosc2_dparams struct with the decompression parameters.
  *
  * @return A pointer to the new context. NULL is returned if this fails.
+ *
+ * @note This support the same environment variables than #blosc2_decompress
+ * for overriding the programmatic decompression values.
+ *
+ * @sa blosc2_decompress
+ *
  */
 BLOSC_EXPORT blosc2_context* blosc2_create_dctx(blosc2_dparams dparams);
 
@@ -1204,7 +1218,7 @@ BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblo
  * Environment variables
  * _____________________
  *
- * *blosc1_compress()* honors different environment variables to control
+ * *blosc2_compress()* honors different environment variables to control
  * internal parameters without the need of doing that programmatically.
  * Here are the ones supported:
  *
@@ -1227,6 +1241,9 @@ BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblo
  * **BLOSC_NTHREADS=(INTEGER)**: This will call
  * #blosc_set_nthreads before the compression process
  * starts.
+ *
+ * **BLOSC_SPLITMODE=(ALWAYS_SPLIT | NEVER_SPLIT | AUTO_SPLIT | FORWARD_COMPAT_SPLIT)**:
+ * This will call #blosc1_set_splitmode() before the compression process starts.
  *
  * **BLOSC_BLOCKSIZE=(INTEGER)**: This will call
  * #blosc_set_blocksize before the compression process starts.
@@ -1504,6 +1521,8 @@ typedef struct blosc2_schunk {
   //!< The default compressor metadata. Each chunk can override this.
   uint8_t clevel;
   //!< The compression level and other compress params.
+  uint8_t splitmode;
+  //!< The split mode.
   int32_t typesize;
   //!< The type size.
   int32_t blocksize;
@@ -1640,10 +1659,7 @@ BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_udio(const char* urlpath, const b
  * @param schunk The super-chunk to convert.
  * @param cframe The address of the destination buffer (output).
  * @param needs_free The pointer to a boolean indicating if it is the user's
- * responsibility to free the chunk returned or not.
- *
- * @note The user is responsible to free the @p cframe buffer (not always required).
- * You can check whether the cframe requires a free with the @p needs_free parameter.
+ * responsibility to free the resulting @p cframe buffer or not.
  *
  * @return If successful, return the size of the (frame) @p cframe buffer.
  * Else, a negative value.
@@ -2153,8 +2169,10 @@ BLOSC_EXPORT int64_t* blosc2_frame_get_offsets(blosc2_schunk *schunk);
   Structures and functions related with compression codecs.
 *********************************************************************/
 
-typedef int (* blosc2_codec_encoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void* chunk);
-typedef int (* blosc2_codec_decoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len, uint8_t meta, blosc2_dparams *dparams, const void* chunk);
+typedef int (* blosc2_codec_encoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+            uint8_t meta, blosc2_cparams *cparams, const void* chunk);
+typedef int (* blosc2_codec_decoder_cb) (const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
+            uint8_t meta, blosc2_dparams *dparams, const void* chunk);
 
 typedef struct {
   uint8_t compcode;
@@ -2208,7 +2226,6 @@ typedef struct {
  * @return 0 if succeeds. Else a negative code is returned.
  */
 BLOSC_EXPORT int blosc2_register_filter(blosc2_filter *filter);
-
 
 /*********************************************************************
   Directory utilities.

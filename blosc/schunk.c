@@ -55,6 +55,7 @@ int blosc2_schunk_get_cparams(blosc2_schunk *schunk, blosc2_cparams **cparams) {
   (*cparams)->clevel = schunk->clevel;
   (*cparams)->typesize = schunk->typesize;
   (*cparams)->blocksize = schunk->blocksize;
+  (*cparams)->splitmode = schunk->splitmode;
   if (schunk->cctx == NULL) {
     (*cparams)->nthreads = blosc2_get_nthreads();
   }
@@ -90,6 +91,7 @@ void update_schunk_properties(struct blosc2_schunk* schunk) {
   schunk->compcode = cparams->compcode;
   schunk->compcode_meta = cparams->compcode_meta;
   schunk->clevel = cparams->clevel;
+  schunk->splitmode = cparams->splitmode;
   schunk->typesize = cparams->typesize;
   schunk->blocksize = cparams->blocksize;
   schunk->chunksize = -1;
@@ -205,6 +207,7 @@ blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_storage *storage
     cparams.clevel = schunk->cctx->clevel;
     cparams.compcode = schunk->cctx->compcode;
     cparams.compcode_meta = schunk->cctx->compcode_meta;
+    cparams.splitmode = schunk->cctx->splitmode;
     cparams.use_dict = schunk->cctx->use_dict;
     cparams.blocksize = schunk->cctx->blocksize;
     memcpy(cparams.filters, schunk->cctx->filters, BLOSC2_MAX_FILTERS);
@@ -1242,15 +1245,16 @@ int blosc2_schunk_get_slice_buffer(blosc2_schunk *schunk, int64_t start, int64_t
       }
     }
     else {
-      if (nblock_start != nblock_stop) {
+      // After extensive timing I have not been able to see lots of situations where
+      // a maskout read is better than a getitem one.  Disabling for now.
+      // if (nblock_start != nblock_stop) {
+      if (false) {
         uint8_t *data = malloc(chunksize);
         /* We have more than 1 block to read, so use a masked read */
         bool *block_maskout = calloc(nblocks, 1);
-        int32_t nblocks_set = 0;
         for (int32_t nblock = 0; nblock < nblocks; nblock++) {
           if ((nblock < nblock_start) || (nblock > nblock_stop)) {
             block_maskout[nblock] = true;
-            nblocks_set++;
           }
         }
         if (blosc2_set_maskout(schunk->dctx, block_maskout, nblocks) < 0) {
