@@ -90,11 +90,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    5    /* for minor interface/format changes  */
+#define BLOSC2_VERSION_MINOR    6    /* for minor interface/format changes  */
 #define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.5.1.dev"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2022-11-29 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.6.1.dev"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2022-12-08 #$"    /* date version */
 
 
 /* The maximum number of dimensions for caterva arrays */
@@ -187,7 +187,7 @@ enum {
   //!< Blosc-registered filters must be between 32 - 159.
   BLOSC2_GLOBAL_REGISTERED_FILTERS = 2,
   //!< Number of Blosc-registered filters at the moment.
-  BLOSC2_USER_REGISTERED_FILTERS_START = 128,
+  BLOSC2_USER_REGISTERED_FILTERS_START = 160,
   BLOSC2_USER_REGISTERED_FILTERS_STOP = 255,
   //!< User-defined filters must be between 128 - 255.
   BLOSC2_MAX_FILTERS = 6,
@@ -350,10 +350,10 @@ enum {
  */
 #ifndef BLOSC_H
 enum {
-  BLOSC_ALWAYS_SPLIT = 0,
-  BLOSC_NEVER_SPLIT = 1,
-  BLOSC_AUTO_SPLIT = 2,
-  BLOSC_FORWARD_COMPAT_SPLIT = 3,
+  BLOSC_ALWAYS_SPLIT = 1,
+  BLOSC_NEVER_SPLIT = 2,
+  BLOSC_AUTO_SPLIT = 3,
+  BLOSC_FORWARD_COMPAT_SPLIT = 4,
 };
 #endif // BLOSC_H
 
@@ -1242,7 +1242,7 @@ BLOSC_EXPORT int blosc2_set_maskout(blosc2_context *ctx, bool *maskout, int nblo
  * #blosc_set_nthreads before the compression process
  * starts.
  *
- * **BLOSC_SPLITMODE=(ALWAYS_SPLIT | NEVER_SPLIT | AUTO_SPLIT | FORWARD_COMPAT_SPLIT)**:
+ * **BLOSC_SPLITMODE=(ALWAYS | NEVER | AUTO | FORWARD_COMPAT)**:
  * This will call #blosc1_set_splitmode() before the compression process starts.
  *
  * **BLOSC_BLOCKSIZE=(INTEGER)**: This will call
