@@ -36,9 +36,9 @@ extern "C" {
 #endif
 #define _WIN32_WINNT 0x0600
 
-#ifndef WIN32_LEAN_AND_MEAN
-#  define WIN32_LEAN_AND_MEAN
-#endif
+//#ifndef WIN32_LEAN_AND_MEAN
+//#  define WIN32_LEAN_AND_MEAN
+//#endif
 
 #undef ERROR   /* reported already defined on VS 2015 (Rich Geldreich) */
 #include <windows.h>
