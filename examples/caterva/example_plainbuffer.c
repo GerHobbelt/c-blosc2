@@ -16,7 +16,7 @@ int main() {
     int64_t shape[] = {10, 10};
     int32_t chunkshape[] = {4, 4};
     int32_t blockshape[] = {2, 2};
-    int8_t itemsize = 8;
+    int8_t typesize = 8;
 
     int64_t slice_start[] = {2, 5};
     int64_t slice_stop[] = {3, 6};
@@ -27,29 +27,32 @@ int main() {
     for (int i = 0; i < ndim; ++i) {
         nelem *= shape[i];
     }
-    int64_t size = nelem * itemsize;
+    int64_t size = nelem * typesize;
     int8_t *data = malloc(size);
 
-    caterva_config_t cfg = CATERVA_CONFIG_DEFAULTS;
-
-    caterva_ctx_t *ctx;
-    caterva_ctx_new(&cfg, &ctx);
+    blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
+    cparams.typesize = typesize;
+    blosc2_context *ctx = blosc2_create_cctx(cparams);
 
     caterva_params_t params = {0};
     params.ndim = ndim;
-    params.itemsize = itemsize;
     for (int i = 0; i < ndim; ++i) {
         params.shape[i] = shape[i];
     }
 
-    caterva_storage_t storage = {0};
+    blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
+    blosc2_storage b_storage = {.cparams=&cparams, .dparams=&dparams};
+    caterva_storage_t storage = {.b_storage=&b_storage};
+    int32_t blocknitems = 1;
     for (int i = 0; i < ndim; ++i) {
         storage.chunkshape[i] = chunkshape[i];
         storage.blockshape[i] = blockshape[i];
+        blocknitems *= storage.blockshape[i];
     }
+    storage.b_storage->cparams->blocksize = blocknitems * storage.b_storage->cparams->typesize;
 
     caterva_array_t *arr;
-    CATERVA_ERROR(caterva_from_buffer(ctx, data, size, &params, &storage, &arr));
+    CATERVA_ERROR(caterva_from_buffer(data, size, &params, &storage, &arr));
 
 
     caterva_storage_t slice_storage = {0};
@@ -59,7 +62,7 @@ int main() {
     }
 
     caterva_array_t *slice;
-    CATERVA_ERROR(caterva_get_slice(ctx, arr, slice_start, slice_stop, &slice_storage,
+    CATERVA_ERROR(caterva_get_slice(arr, slice_start, slice_stop, &slice_storage,
                                     &slice));
 
     CATERVA_ERROR(caterva_squeeze(ctx, slice));
@@ -75,6 +78,7 @@ int main() {
     CATERVA_ERROR(caterva_to_buffer(ctx, slice, buffer, buffer_size));
 
     // printf("Elapsed seconds: %.5f\n", blosc_elapsed_secs(t0, t1));
+    blosc2_free_ctx(ctx);
 
     return 0;
 }
