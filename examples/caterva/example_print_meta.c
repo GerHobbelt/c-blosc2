@@ -28,25 +28,22 @@
 
 int print_meta(char *urlpath) {
 
-    blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
-    blosc2_context *ctx = blosc2_create_cctx(cparams);
-    caterva_array_t *arr;
-    CATERVA_ERROR(caterva_open(ctx, urlpath, &arr));
-    caterva_print_meta(arr);
-    caterva_free(&arr);
-    blosc2_free_ctx(ctx);
+  caterva_array_t *arr;
+  CATERVA_ERROR(caterva_open(urlpath, &arr));
+  caterva_print_meta(arr);
+  caterva_free(&arr);
 
-    return 0;
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("Usage: %s urlpath", argv[0]);
-        exit(-1);
-    }
+  if (argc != 2) {
+    printf("Usage: %s urlpath", argv[0]);
+    exit(-1);
+  }
 
-    char* urlpath = argv[1];
-    print_meta(urlpath);
+  char *urlpath = argv[1];
+  print_meta(urlpath);
 
-    return 0;
+  return 0;
 }
