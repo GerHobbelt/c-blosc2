@@ -440,7 +440,7 @@ enum {
   BLOSC2_ERROR_PLUGIN_IO = -30,       //!< IO plugin error
   BLOSC2_ERROR_FILE_REMOVE = -31,     //!< Remove file failure
   BLOSC2_ERROR_NULL_POINTER = -32,    //!< Pointer is null
-  BLOSC2_ERROR_INVALID_INDEX = -33,    //!< Invalid index
+  BLOSC2_ERROR_INVALID_INDEX = -33,   //!< Invalid index
 };
 
 
@@ -2155,7 +2155,7 @@ BLOSC_EXPORT int blosc2_vlmeta_delete(blosc2_schunk *schunk, const char *name);
  *
  * @param schunk The super-chunk containing the variable-length metalayers.
  * @param names The pointer to a char** to store the name pointers. This should
- * be of size @p *schunk->nvlmetalayers * sizeof(char*).
+ * be of size *schunk->nvlmetalayers * sizeof(char*).
  *
  * @return The number of the variable-length metalayers in the super-chunk.
  * This cannot fail unless the user does not pass a @p names which is large enough to
