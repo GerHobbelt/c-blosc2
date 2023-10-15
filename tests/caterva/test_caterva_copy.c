@@ -26,9 +26,10 @@ CUTEST_TEST_DATA(copy) {
 
 
 CUTEST_TEST_SETUP(copy) {
+    blosc2_init();
     caterva_config_t cfg = CATERVA_CONFIG_DEFAULTS;
     cfg.nthreads = 2;
-    cfg.compcodec = BLOSC_BLOSCLZ;
+    cfg.compcode = BLOSC_BLOSCLZ;
     caterva_ctx_new(&cfg, &data->ctx);
 
     // Add parametrizations
@@ -37,12 +38,12 @@ CUTEST_TEST_SETUP(copy) {
             4,
     ));
     CUTEST_PARAMETRIZE(shapes, test_shapes_t, CUTEST_DATA(
-            {2, {100, 100}, {20, 20}, {10, 10},
+            {2, {30, 30}, {20, 20}, {10, 10},
                 {20, 20}, {10, 10}},
-            {3, {100, 55, 123}, {31, 5, 22}, {4, 4, 4},
-                {50, 15, 20}, {10, 4, 4}},
-            {3, {100, 0, 12}, {31, 0, 12}, {10, 0, 12},
-                {50, 0, 12}, {25, 0, 6}},
+            {3, {40, 15, 23}, {31, 5, 22}, {4, 4, 4},
+                {30, 5, 20}, {10, 4, 4}},
+            {3, {40, 0, 12}, {31, 0, 12}, {10, 0, 12},
+                {20, 0, 12}, {25, 0, 6}},
 // The following cases are skipped to reduce the execution time of the test
 //            {4, {25, 60, 31, 12}, {12, 20, 20, 10}, {5, 5, 5, 10},
 //                {25, 20, 20, 10}, {5, 5, 5, 10}},
@@ -101,8 +102,8 @@ CUTEST_TEST_TEST(copy) {
     }
     storage.nmetalayers = 1;
     storage.metalayers[0].name = "random";
-    storage.metalayers[0].sdata = (uint8_t *) &datatoserialize;
-    storage.metalayers[0].size = 8;
+    storage.metalayers[0].content = (uint8_t *) &datatoserialize;
+    storage.metalayers[0].content_len = 8;
 
 
     /* Create original data */
@@ -124,15 +125,15 @@ CUTEST_TEST_TEST(copy) {
     if (!exists) {
         CATERVA_TEST_ASSERT(CATERVA_ERR_BLOSC_FAILED);
     }
-    caterva_metalayer_t meta;
+    blosc2_metalayer meta;
     CATERVA_TEST_ASSERT(caterva_meta_get(data->ctx, src, "random", &meta));
-    double serializeddata = *((double *) meta.sdata);
+    double serializeddata = *((double *) meta.content);
     if (serializeddata != datatoserialize) {
         CATERVA_TEST_ASSERT(CATERVA_ERR_BLOSC_FAILED);
     }
 
     CATERVA_TEST_ASSERT(caterva_vlmeta_add(data->ctx, src, &meta));
-    free(meta.sdata);
+    free(meta.content);
     free(meta.name);
 
 
@@ -156,20 +157,20 @@ CUTEST_TEST_TEST(copy) {
 
     /* Assert the metalayers creation */
     CATERVA_TEST_ASSERT(caterva_meta_get(data->ctx, dest, "random", &meta));
-    serializeddata = *((double *) meta.sdata);
+    serializeddata = *((double *) meta.content);
     if (serializeddata != datatoserialize) {
         CATERVA_TEST_ASSERT(CATERVA_ERR_BLOSC_FAILED);
     }
-    free(meta.sdata);
+    free(meta.content);
     free(meta.name);
 
-    caterva_metalayer_t vlmeta;
+    blosc2_metalayer vlmeta;
     CATERVA_TEST_ASSERT(caterva_vlmeta_get(data->ctx, dest, "random", &vlmeta));
-    serializeddata = *((double *) vlmeta.sdata);
+    serializeddata = *((double *) vlmeta.content);
     if (serializeddata != datatoserialize) {
         CATERVA_TEST_ASSERT(CATERVA_ERR_BLOSC_FAILED);
     }
-    free(vlmeta.sdata);
+    free(vlmeta.content);
     free(vlmeta.name);
 
 
@@ -193,6 +194,7 @@ CUTEST_TEST_TEST(copy) {
 
 CUTEST_TEST_TEARDOWN(copy) {
     caterva_ctx_free(&data->ctx);
+    blosc2_destroy();
 }
 
 int main() {

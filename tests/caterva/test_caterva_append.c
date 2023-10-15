@@ -27,9 +27,10 @@ CUTEST_TEST_DATA(append) {
 
 
 CUTEST_TEST_SETUP(append) {
+    blosc2_init();
     caterva_config_t cfg = CATERVA_CONFIG_DEFAULTS;
     cfg.nthreads = 2;
-    cfg.compcodec = BLOSC_BLOSCLZ;
+    cfg.compcode = BLOSC_BLOSCLZ;
     caterva_ctx_new(&cfg, &data->ctx);
 
     // Add parametrizations
@@ -109,7 +110,7 @@ CUTEST_TEST_TEST(append) {
     }
     CATERVA_ERROR(caterva_full(data->ctx, &params, &storage, value, &src));
 
-    uint8_t *buffer = data->ctx->cfg->alloc(buffersize);
+    uint8_t *buffer = malloc(buffersize);
     fill_buf(buffer, itemsize, buffersize / itemsize);
     CATERVA_ERROR(caterva_append(data->ctx, src, buffer, buffersize, shapes.axis));
 
@@ -122,7 +123,7 @@ CUTEST_TEST_TEST(append) {
     stop[shapes.axis] = shapes.shape[shapes.axis] + shapes.buffershape[shapes.axis];
 
     /* Fill buffer with a slice from the new chunks */
-    uint8_t *res_buffer = data->ctx->cfg->alloc(buffersize);
+    uint8_t *res_buffer = malloc(buffersize);
     CATERVA_ERROR(caterva_get_slice_buffer(data->ctx, src, start, stop, res_buffer,
                                            shapes.buffershape, buffersize));
 
@@ -150,8 +151,8 @@ CUTEST_TEST_TEST(append) {
     }
     /* Free mallocs */
     free(value);
-    data->ctx->cfg->free(buffer);
-    data->ctx->cfg->free(res_buffer);
+    free(buffer);
+    free(res_buffer);
 
     CATERVA_TEST_ASSERT(caterva_free(data->ctx, &src));
     caterva_remove(data->ctx, urlpath);
@@ -161,6 +162,7 @@ CUTEST_TEST_TEST(append) {
 
 CUTEST_TEST_TEARDOWN(append) {
     caterva_ctx_free(&data->ctx);
+    blosc2_destroy();
 }
 
 int main() {

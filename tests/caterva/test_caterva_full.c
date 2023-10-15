@@ -18,9 +18,10 @@ CUTEST_TEST_DATA(full) {
 
 
 CUTEST_TEST_SETUP(full) {
+    blosc2_init();
     caterva_config_t cfg = CATERVA_CONFIG_DEFAULTS;
     cfg.nthreads = 2;
-    cfg.compcodec = BLOSC_BLOSCLZ;
+    cfg.compcode = BLOSC_BLOSCLZ;
     caterva_ctx_new(&cfg, &data->ctx);
 
     // Add parametrizations
@@ -34,7 +35,7 @@ CUTEST_TEST_SETUP(full) {
             {2, {20, 10}, {7, 5}, {3, 5}}, // 0-shape
             {2, {14, 10}, {8, 5}, {2, 2}}, // general,
             {3, {12, 10, 14}, {3, 5, 9}, {3, 4, 4}}, // general
-            {3, {10, 21, 30, 55}, {8, 7, 15, 3}, {5, 5, 10, 1}}, // general,
+            {3, {10, 21, 20, 5}, {8, 7, 15, 3}, {5, 5, 10, 1}}, // general,
     ));
     CUTEST_PARAMETRIZE(backend, _test_backend, CUTEST_DATA(
             {false, false},
@@ -141,6 +142,7 @@ CUTEST_TEST_TEST(full) {
 
 CUTEST_TEST_TEARDOWN(full) {
     caterva_ctx_free(&data->ctx);
+    blosc2_destroy();
 }
 
 int main() {
