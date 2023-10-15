@@ -11,11 +11,6 @@
 #include "test_common.h"
 
 
-CUTEST_TEST_DATA(zeros) {
-    void *unused;
-};
-
-
 CUTEST_TEST_SETUP(zeros) {
   blosc2_init();
 
@@ -82,11 +77,11 @@ CUTEST_TEST_TEST(zeros) {
 
   /* Free mallocs */
   free(buffer_dest);
-  CATERVA_TEST_ASSERT(caterva_free(&src));
+  CATERVA_TEST_ASSERT(caterva_free(src));
   CATERVA_TEST_ASSERT(caterva_free_ctx(ctx));
   blosc2_remove_urlpath(urlpath);
 
-  return CATERVA_SUCCEED;
+  return BLOSC2_ERROR_SUCCESS;
 }
 
 

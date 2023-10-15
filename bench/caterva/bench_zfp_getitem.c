@@ -98,7 +98,7 @@ int comp(const char *urlpath) {
   blosc2_storage b2_storage = {.cparams=&cparams, .dparams=&dparams};
   b2_storage.urlpath = "schunk_rate.cat";
 
-  caterva_context_t *params = caterva_create_ctx(&b2_storage, ndim, shape_aux, chunkshape, blockshape,
+  caterva_context_t *ctx = caterva_create_ctx(&b2_storage, ndim, shape_aux, chunkshape, blockshape,
                                                  NULL, 0);
 
   caterva_array_t *arr;
@@ -114,12 +114,12 @@ int comp(const char *urlpath) {
   ctx_zfp->compcode_meta = (uint8_t) (100.0 * (float) arr->sc->cbytes / (float) arr->sc->nbytes);
   ctx_zfp->filters[BLOSC2_MAX_FILTERS - 1] = 0;
   ctx_zfp->filters_meta[BLOSC2_MAX_FILTERS - 1] = 0;
-  copied = caterva_copy(params, arr, &arr_rate);
+  copied = caterva_copy(ctx, arr, &arr_rate);
   if (copied != 0) {
     printf("Error BLOSC_CODEC_ZFP_FIXED_RATE \n");
     free(chunkshape);
     free(blockshape);
-    caterva_free(&arr);
+    caterva_free(arr);
     return -1;
   }
   printf("ZFP_FIXED_RATE comp ratio: %f \n", (float) arr_rate->sc->nbytes / (float) arr_rate->sc->cbytes);
@@ -176,9 +176,9 @@ int comp(const char *urlpath) {
   free(shape_aux);
   free(chunkshape);
   free(blockshape);
-  caterva_free(&arr);
-  caterva_free(&arr_rate);
-  CATERVA_ERROR(caterva_free_ctx(params));
+  caterva_free(arr);
+  caterva_free(arr_rate);
+  BLOSC_ERROR(caterva_free_ctx(ctx));
   blosc2_free_ctx(ctx_zfp);
   if (needs_free_blosc) {
     free(chunk_blosc);
@@ -188,7 +188,7 @@ int comp(const char *urlpath) {
   }
   blosc2_destroy();
 
-  return CATERVA_SUCCEED;
+  return BLOSC2_ERROR_SUCCESS;
 }
 
 int solar1(void) {
@@ -251,21 +251,21 @@ int precip3m(void) {
 int main() {
 
   printf("wind1 \n");
-  CATERVA_ERROR(wind1());
+  BLOSC_ERROR(wind1());
   printf("air1 \n");
-  CATERVA_ERROR(air1());
+  BLOSC_ERROR(air1());
   printf("solar1 \n");
-  CATERVA_ERROR(solar1());
+  BLOSC_ERROR(solar1());
   printf("snow1 \n");
-  CATERVA_ERROR(snow1());
+  BLOSC_ERROR(snow1());
   printf("precip1 \n");
-  CATERVA_ERROR(precip1());
+  BLOSC_ERROR(precip1());
   printf("precip2 \n");
-  CATERVA_ERROR(precip2());
+  BLOSC_ERROR(precip2());
   printf("precip3 \n");
-  CATERVA_ERROR(precip3());
+  BLOSC_ERROR(precip3());
 //    printf("precip3m \n");
-  //  CATERVA_ERROR(precip3m());
-  return CATERVA_SUCCEED;
+  //  BLOSC_ERROR(precip3m());
+  return BLOSC2_ERROR_SUCCESS;
 
 }

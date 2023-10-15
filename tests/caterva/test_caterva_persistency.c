@@ -29,11 +29,6 @@ typedef struct {
 } test_shapes_t;
 
 
-CUTEST_TEST_DATA(persistency) {
-    void *unused;
-};
-
-
 CUTEST_TEST_SETUP(persistency) {
   blosc2_init();
 
@@ -105,8 +100,8 @@ CUTEST_TEST_TEST(persistency) {
   /* Free mallocs */
   free(buffer);
   free(buffer_dest);
-  CATERVA_TEST_ASSERT(caterva_free(&src));
-  CATERVA_TEST_ASSERT(caterva_free(&dest));
+  CATERVA_TEST_ASSERT(caterva_free(src));
+  CATERVA_TEST_ASSERT(caterva_free(dest));
   CATERVA_TEST_ASSERT(caterva_free_ctx(ctx));
 
   blosc2_remove_urlpath(urlpath);

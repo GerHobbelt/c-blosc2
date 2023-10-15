@@ -9,7 +9,6 @@
 **********************************************************************/
 
 #include <caterva_utils.h>
-#include "context.h"
 
 // copyNdim where N = {2-8} - specializations of copy loops to be used by caterva_copy_buffer
 // since we don't have c++ templates, substitute manual specializations for up to known CATERVA_MAX_DIM (8)
@@ -219,7 +218,7 @@ int caterva_copy_buffer(int8_t ndim,
     for (int i = 0; i < ndim; ++i) {
         copy_shape[i] = src_stop[i] - src_start[i];
         if(copy_shape[i] == 0) {
-            return CATERVA_SUCCEED;
+            return BLOSC2_ERROR_SUCCESS;
         }
     }
 
@@ -278,5 +277,5 @@ switch(ndim) {
     break;
     }
 
-    return CATERVA_SUCCEED;
+    return BLOSC2_ERROR_SUCCESS;
 }

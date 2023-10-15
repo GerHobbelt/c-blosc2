@@ -11,11 +11,6 @@
 #include "test_common.h"
 
 
-CUTEST_TEST_DATA(serialize) {
-    void *unused;
-};
-
-
 CUTEST_TEST_SETUP(serialize) {
   blosc2_init();
 
@@ -84,8 +79,8 @@ CUTEST_TEST_TEST(serialize) {
 
   free(buffer);
   free(buffer_dest);
-  CATERVA_TEST_ASSERT(caterva_free(&src));
-  CATERVA_TEST_ASSERT(caterva_free(&dest));
+  CATERVA_TEST_ASSERT(caterva_free(src));
+  CATERVA_TEST_ASSERT(caterva_free(dest));
   CATERVA_TEST_ASSERT(caterva_free_ctx(ctx));
 
   return 0;

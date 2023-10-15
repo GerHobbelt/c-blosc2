@@ -11,11 +11,6 @@
 #include "test_common.h"
 
 
-CUTEST_TEST_DATA(roundtrip) {
-    void *unused;
-};
-
-
 CUTEST_TEST_SETUP(roundtrip) {
   blosc2_init();
 
@@ -66,11 +61,11 @@ CUTEST_TEST_TEST(roundtrip) {
   /* Free mallocs */
   free(buffer);
   free(buffer_dest);
-  CATERVA_TEST_ASSERT(caterva_free(&src));
+  CATERVA_TEST_ASSERT(caterva_free(src));
   CATERVA_TEST_ASSERT(caterva_free_ctx(ctx));
   blosc2_remove_urlpath(urlpath);
 
-  return CATERVA_SUCCEED;
+  return BLOSC2_ERROR_SUCCESS;
 }
 
 

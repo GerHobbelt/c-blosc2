@@ -21,11 +21,6 @@ typedef struct {
 } test_shapes_t;
 
 
-CUTEST_TEST_DATA(append) {
-  void *unused;
-};
-
-
 CUTEST_TEST_SETUP(append) {
   blosc2_init();
 
@@ -101,11 +96,11 @@ CUTEST_TEST_TEST(append) {
     default:
       break;
   }
-  CATERVA_ERROR(caterva_full(ctx, &src, value));
+  BLOSC_ERROR(caterva_full(ctx, &src, value));
 
   uint8_t *buffer = malloc(buffersize);
   fill_buf(buffer, typesize, buffersize / typesize);
-  CATERVA_ERROR(caterva_append(src, buffer, buffersize, shapes.axis));
+  BLOSC_ERROR(caterva_append(src, buffer, buffersize, shapes.axis));
 
   int64_t start[CATERVA_MAX_DIM] = {0};
   start[shapes.axis] = shapes.shape[shapes.axis];
@@ -117,7 +112,7 @@ CUTEST_TEST_TEST(append) {
 
   /* Fill buffer with a slice from the new chunks */
   uint8_t *res_buffer = malloc(buffersize);
-  CATERVA_ERROR(caterva_get_slice_buffer(src, start, stop, res_buffer,
+  BLOSC_ERROR(caterva_get_slice_buffer(src, start, stop, res_buffer,
                                          shapes.buffershape, buffersize));
 
   for (uint64_t i = 0; i < (uint64_t) buffersize / typesize; ++i) {
@@ -139,7 +134,7 @@ CUTEST_TEST_TEST(append) {
                       ((uint8_t *) buffer)[i] == ((uint8_t *) res_buffer)[i]);
         break;
       default:
-        CATERVA_TEST_ASSERT(CATERVA_ERR_INVALID_ARGUMENT);
+        CATERVA_TEST_ASSERT(BLOSC2_ERROR_INVALID_PARAM);
     }
   }
   /* Free mallocs */
@@ -147,7 +142,7 @@ CUTEST_TEST_TEST(append) {
   free(buffer);
   free(res_buffer);
 
-  CATERVA_TEST_ASSERT(caterva_free(&src));
+  CATERVA_TEST_ASSERT(caterva_free(src));
   CATERVA_TEST_ASSERT(caterva_free_ctx(ctx));
   blosc2_remove_urlpath(urlpath);
 
