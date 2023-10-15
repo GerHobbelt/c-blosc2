@@ -1,14 +1,21 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.7.1 to 2.7.2
+===========================
 
-Changes from 2.6.1 to 2.7.0
+#XXX version-specific blurb XXX#
+
+
+Changes from 2.6.1 to 2.7.1
 ===========================
 
 * Caterva has been merged and carefully integrated in C-Blosc2 in the new b2nd interface.
   For more info on the new interface, see https://www.blosc.org/c-blosc2/reference/b2nd.html.
   Thanks to Marta Iborra, Oscar Guiñón, J. David Ibáñez and Francesc Alted.  Also thanks to
   Aleix Alcacer for his great work in the Caterva project.
+
+  We have a blog about this: https://www.blosc.org/posts/blosc2-ndim-intro
 
 * Updated internal zstd sources to 1.5.4.  Thanks to Dimitri Papadopoulos.
 
