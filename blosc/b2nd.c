@@ -84,6 +84,11 @@ int b2nd_serialize_meta(int8_t ndim, int64_t *shape, int32_t *chunkshape,
   pmeta += dtype_len;
 
   int32_t slen = (int32_t) (pmeta - *smeta);
+  if (max_smeta_len != slen) {
+    BLOSC_TRACE_ERROR("meta length is inconsistent!");
+    return BLOSC2_ERROR_FAILURE;
+  }
+
   return (int)slen;
 }
 
@@ -92,7 +97,7 @@ int b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64
                           int32_t *chunkshape, int32_t *blockshape, char **dtype, int8_t *dtype_format) {
   uint8_t *pmeta = smeta;
 
-  // Check that we have an array with 5 entries (version, ndim, shape, chunkshape, blockshape)
+  // Check that we have an array with 7 entries (version, ndim, shape, chunkshape, blockshape, dtype_format, dtype)
   pmeta += 1;
 
   // version entry
@@ -445,10 +450,7 @@ int b2nd_from_schunk(blosc2_schunk *schunk, b2nd_array_t **array) {
   free(smeta);
 
   BLOSC_ERROR(array_without_schunk(&params, array));
-
-  if (params.dtype != NULL) {
-    free(params.dtype);
-  }
+  free(params.dtype);
 
   (*array)->sc = schunk;
 
@@ -506,6 +508,19 @@ int b2nd_open(const char *urlpath, b2nd_array_t **array) {
 }
 
 
+int b2nd_open_offset(const char *urlpath, b2nd_array_t **array, int64_t offset) {
+  BLOSC_ERROR_NULL(urlpath, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+
+  blosc2_schunk *sc = blosc2_schunk_open_offset(urlpath, offset);
+
+  // ...and create a b2nd array out of it
+  BLOSC_ERROR(b2nd_from_schunk(sc, array));
+
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
 int b2nd_free(b2nd_array_t *array) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
 
@@ -513,9 +528,7 @@ int b2nd_free(b2nd_array_t *array) {
     if (array->sc != NULL) {
       blosc2_schunk_free(array->sc);
     }
-    if (array->dtype != NULL) {
-      free(array->dtype);
-    }
+    free(array->dtype);
     free(array);
   }
   return BLOSC2_ERROR_SUCCESS;
