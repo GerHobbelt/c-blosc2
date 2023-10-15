@@ -37,6 +37,9 @@ extern "C" {
 /* The maximum number of metalayers for b2nd arrays */
 #define B2ND_MAX_METALAYERS (BLOSC2_MAX_METALAYERS - 1)
 
+/* The default data type */
+#define B2ND_DEFAULT_DTYPE "uint8"
+
 /**
  * @brief An *optional* cache for a single block.
  *
@@ -97,6 +100,8 @@ typedef struct {
   //!< Item - shape strides.
   int64_t chunk_array_strides[B2ND_MAX_DIM];
   //!< Item - shape strides.
+  char *dtype;
+  //!< Data type in NumPy format
 } b2nd_array_t;
 
 
@@ -108,6 +113,7 @@ typedef struct {
  * @param shape The shape.
  * @param chunkshape The chunk shape.
  * @param blockshape The block shape.
+ * @param dtype The data type expressed as a string version of a NumPy dtype.
  * @param metalayers The memory pointer to the list of the metalayers desired.
  * @param nmetalayers The number of metalayers.
  *
@@ -116,9 +122,9 @@ typedef struct {
  * @note The pointer returned must be freed when not used anymore with #b2nd_free_ctx.
  *
  */
-BLOSC_EXPORT b2nd_context_t *b2nd_create_ctx(blosc2_storage *b2_storage, int8_t ndim, int64_t *shape,
-                                             int32_t *chunkshape, int32_t *blockshape,
-                                             blosc2_metalayer *metalayers, int32_t nmetalayers);
+BLOSC_EXPORT b2nd_context_t *
+b2nd_create_ctx(blosc2_storage *b2_storage, int8_t ndim, int64_t *shape, int32_t *chunkshape, int32_t *blockshape,
+                char *dtype, blosc2_metalayer *metalayers, int32_t nmetalayers);
 
 
 /**
@@ -369,7 +375,7 @@ BLOSC_EXPORT int b2nd_print_meta(b2nd_array_t *array);
  *
  * @param array The array to be resized.
  * @param new_shape The new shape from the array.
- * @param start The position in which the array will be extended or shrinked.
+ * @param start The position in which the array will be extended or shrunk.
  *
  * @return An error code
  */
@@ -379,7 +385,7 @@ BLOSC_EXPORT int b2nd_resize(b2nd_array_t *array, const int64_t *new_shape, cons
 /**
  * @brief Insert given buffer in an array extending the given axis.
  *
- * @param array The array to insert the data.
+ * @param array The array to insert the data in.
  * @param buffer The buffer data to be inserted.
  * @param buffersize The size (in bytes) of the buffer.
  * @param axis The axis that will be extended.
@@ -393,8 +399,8 @@ BLOSC_EXPORT int b2nd_insert(b2nd_array_t *array, void *buffer, int64_t buffersi
 /**
  * Append a buffer at the end of a b2nd array.
  *
- * @param array The b2nd array.
- * @param buffer The buffer where the data is stored.
+ * @param array The array to append the data in.
+ * @param buffer The buffer data to be appended.
  * @param buffersize Size (in bytes) of the buffer.
  * @param axis The axis that will be extended to append the data.
  *
@@ -410,7 +416,7 @@ BLOSC_EXPORT int b2nd_append(b2nd_array_t *array, void *buffer, int64_t buffersi
  * @param axis The axis to shrink.
  * @param delete_start The start position from the axis to start deleting chunks.
  * @param delete_len The number of items to delete to the array->shape[axis].
- * The newshape[axis] will be the old array->shape[axis] - delete_len
+ *   The newshape[axis] will be the old array->shape[axis] - delete_len
  *
  * @return An error code.
  *
@@ -421,19 +427,48 @@ BLOSC_EXPORT int b2nd_delete(b2nd_array_t *array, const int8_t axis,
 
 
 // Indexing section
+
+/**
+ * @brief Get an element selection along each dimension of an array independently.
+ *
+ * @param array The array to get the data from.
+ * @param selection The elements along each dimension.
+ * @param selection_size The size of the selection along each dimension.
+ * @param buffer The buffer for getting the data.
+ * @param buffershape The shape of the buffer.
+ * @param buffersize The buffer size (in bytes).
+ *
+ * @return An error code.
+ *
+ * @note See also b2nd_set_orthogonal_selection.
+ */
 BLOSC_EXPORT int b2nd_get_orthogonal_selection(b2nd_array_t *array, int64_t **selection, int64_t *selection_size, void *buffer,
                                                int64_t *buffershape, int64_t buffersize);
 
+/**
+ * @brief Set an element selection along each dimension of an array independently.
+ *
+ * @param array The array to set the data to.
+ * @param selection The elements along each dimension.
+ * @param selection_size The size of the selection along each dimension.
+ * @param buffer The buffer with the data for setting.
+ * @param buffershape The shape of the buffer.
+ * @param buffersize The buffer size (in bytes).
+ *
+ * @return An error code.
+ *
+ * @note See also b2nd_get_orthogonal_selection.
+ */
 BLOSC_EXPORT int b2nd_set_orthogonal_selection(b2nd_array_t *array, int64_t **selection, int64_t *selection_size, void *buffer,
                                                int64_t *buffershape, int64_t buffersize);
 
 
 // Metainfo section
 BLOSC_EXPORT int b2nd_serialize_meta(int8_t ndim, int64_t *shape, const int32_t *chunkshape,
-                                     const int32_t *blockshape, uint8_t **smeta);
+                                     const int32_t *blockshape, const char *dtype, uint8_t **smeta);
 
 BLOSC_EXPORT int b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim,
-                                       int64_t *shape, int32_t *chunkshape, int32_t *blockshape);
+                                       int64_t *shape, int32_t *chunkshape, int32_t *blockshape, char **dtype);
 
 
 #ifdef __cplusplus
