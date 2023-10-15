@@ -100,7 +100,7 @@ Meta-compression and other advantages over existing compressors
 
 C-Blosc2 is not like other compressors: it should rather be called a meta-compressor.  This is so because it can use different codecs (libraries that can reduce the size of inputs) and filters (libraries that generally improve compression ratio).  At the same time, it can also be called a compressor because it makes an actual use of the several codecs and filters, so it can actually work like so.
 
-Currently C-Blosc2 comes with support of BloscLZ, a compressor heavily based on `FastLZ <https://ariya.github.io/FastLZ/>`_, `LZ4 and LZ4HC <https://github.com/lz4/lz4>`_, `Zstandard <https://github.com/facebook/zstd>`_, and `Zlib, via zlib-ng: <https://github.com/zlib-ng/zlib-ng>`_, as well as a highly optimized (it can use SSE2, AVX2, NEON or ALTIVEC instructions, if available) shuffle and bitshuffle filters (for info on how shuffling works, see slide 17 of https://www.slideshare.net/PyData/blosc-py-data-2014).
+Currently C-Blosc2 comes with support of BloscLZ, a compressor heavily based on `FastLZ <https://ariya.github.io/FastLZ/>`_, `LZ4 and LZ4HC <http://www.lz4.org/>`_, `Zstandard <https://github.com/facebook/zstd>`_, and `Zlib, via zlib-ng: <https://github.com/zlib-ng/zlib-ng>`_, as well as a highly optimized (it can use SSE2, AVX2, NEON or ALTIVEC instructions, if available) shuffle and bitshuffle filters (for info on how shuffling works, see slide 17 of https://www.slideshare.net/PyData/blosc-py-data-2014).
 
 Blosc is in charge of coordinating the codecs and filters so that they can leverage the blocking technique (described above) as
 well as multi-threaded execution (if several cores are available) automatically. That makes that every codec and filter
@@ -119,7 +119,7 @@ As said, C-Blosc2 adds a powerful mechanism for adding different metalayers on t
 Python wrapper
 ==============
 
-We are officially supporting (thanks to the Python Software Foundation) a `Python wrapper for Blosc2 <https://github.com/Blosc/python-blosc2>`_.  Although this is still in early development, it already supports all the features of the venerable `python-blosc <https://github.com/Blosc/python-blosc>` package.  As a bonus, the `python-blosc2` package comes with wheels and binary versions of the C-Blosc2 libraries, so anyone, even non-Python users can install C-Blosc2 binaries easily with:
+We are officially supporting (thanks to the Python Software Foundation) a `Python wrapper for Blosc2 <https://github.com/Blosc/python-blosc2>`_.  Although this is still in early development, it already supports all the features of the venerable `python-blosc <https://github.com/Blosc/python-blosc>`_ package.  As a bonus, the `python-blosc2` package comes with wheels and binary versions of the C-Blosc2 libraries, so anyone, even non-Python users can install C-Blosc2 binaries easily with:
 
 .. code-block:: console
 
@@ -208,7 +208,7 @@ For Mac OSX on arm64 architecture, you need to compile like this:
 Support for the LZ4 optimized version in Intel IPP
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-C-Blosc2 comes with support for a highly optimized version of the LZ4 codec present in Intel IPP.  Here it is a way to easily install Intel IPP using Conda(https://docs.conda.io):
+C-Blosc2 comes with support for a highly optimized version of the LZ4 codec present in Intel IPP.  Here it is a way to easily install Intel IPP using Conda (https://docs.conda.io):
 
 .. code-block:: console
 
