@@ -12,26 +12,22 @@
 # include <stdlib.h>
 
 
-int frame_generator(int8_t *data, int8_t ndim, const int64_t shape[8], const int32_t chunkshape[8],
-                    const int32_t blockshape[8], int32_t typesize, int64_t size, char *urlpath) {
+int frame_generator(int8_t *data, int8_t ndim, int64_t *shape, int32_t *chunkshape,
+                    int32_t *blockshape, int32_t typesize, int64_t size, char *urlpath) {
   blosc2_remove_urlpath(urlpath);
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
   cparams.typesize = typesize;
-  blosc2_context *ctx = blosc2_create_cctx(cparams);
-
-  blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
-  blosc2_storage b2_storage = {.cparams=&cparams, .dparams=&dparams};
+  blosc2_storage b2_storage = {.cparams=&cparams};
   b2_storage.urlpath = urlpath;
   b2_storage.contiguous = true;
 
-  caterva_params_t *params = caterva_new_params(&b2_storage, ndim, shape, chunkshape, blockshape,
-                                                NULL, 0);
+  caterva_context_t *ctx = caterva_create_ctx(&b2_storage, ndim, shape, chunkshape, blockshape,
+                                                 NULL, 0);
 
   caterva_array_t *arr;
-  CATERVA_ERROR(caterva_from_buffer(data, size, params, &arr));
-  CATERVA_ERROR(caterva_free_params(params));
+  CATERVA_ERROR(caterva_from_buffer(ctx, &arr, data, size));
+  CATERVA_ERROR(caterva_free_ctx(ctx));
   caterva_print_meta(arr);
-  blosc2_free_ctx(ctx);
 
   return 0;
 }
@@ -41,7 +37,7 @@ int all_eq() {
   int64_t shape[] = {100, 50, 100};
   int32_t chunkshape[] = {40, 20, 60};
   int32_t blockshape[] = {20, 10, 30};
-  int8_t typesize = 8;
+  int32_t typesize = 8;
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
@@ -63,7 +59,7 @@ int cyclic() {
   int64_t shape[] = {100, 50, 100};
   int32_t chunkshape[] = {40, 20, 60};
   int32_t blockshape[] = {20, 10, 30};
-  int8_t typesize = 8;
+  int32_t typesize = 8;
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
@@ -85,7 +81,7 @@ int many_matches() {
   int64_t shape[] = {80, 120, 111};
   int32_t chunkshape[] = {40, 30, 50};
   int32_t blockshape[] = {11, 14, 24};
-  int8_t typesize = 8;
+  int32_t typesize = 8;
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
@@ -108,7 +104,7 @@ int float_cyclic() {
   int64_t shape[] = {40, 60, 20};
   int32_t chunkshape[] = {20, 30, 16};
   int32_t blockshape[] = {11, 14, 7};
-  int8_t typesize = sizeof(float);
+  int32_t typesize = sizeof(float);
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
@@ -132,7 +128,7 @@ int double_same_cells() {
   int64_t shape[] = {40, 60};
   int32_t chunkshape[] = {20, 30};
   int32_t blockshape[] = {16, 16};
-  int8_t typesize = sizeof(double);
+  int32_t typesize = sizeof(double);
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
@@ -157,7 +153,7 @@ int big_float_frame() {
   int64_t shape[] = {200, 310, 214};
   int32_t chunkshape[] = {110, 120, 76};
   int32_t blockshape[] = {57, 52, 35};
-  int8_t typesize = sizeof(float);
+  int32_t typesize = sizeof(float);
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
@@ -183,7 +179,7 @@ int day_month_temp() {
   int64_t shape[] = {400, 3};
   int32_t chunkshape[] = {110, 3};
   int32_t blockshape[] = {57, 3};
-  int8_t typesize = sizeof(float);
+  int32_t typesize = sizeof(float);
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
@@ -211,7 +207,7 @@ int item_prices() {
   int64_t shape[] = {12, 25, 250};
   int32_t chunkshape[] = {6, 10, 50};
   int32_t blockshape[] = {3, 5, 10};
-  int8_t typesize = sizeof(float);
+  int32_t typesize = sizeof(float);
   int64_t nelem = 1;
   for (int i = 0; i < ndim; ++i) {
     nelem *= shape[i];
