@@ -1,4 +1,12 @@
-# a simple way to detect that we are using CMAKE
+# Blosc - Blocked Shuffling and Compression Library
+#
+# Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+# https://blosc.org
+# License: BSD 3-Clause (see LICENSE.txt)
+#
+# See LICENSE.txt for details about copyright and rights to use.
+
+# A simple way to detect that we are using CMAKE
 add_definitions(-DUSING_CMAKE)
 
 set(INTERNAL_LIBS ${PROJECT_SOURCE_DIR}/internal-complibs)
@@ -43,7 +51,8 @@ include_directories(${BLOSC_INCLUDE_DIRS})
 # library sources
 set(SOURCES ${SOURCES} blosc2.c blosclz.c fastcopy.c fastcopy.h schunk.c frame.c stune.c stune.h
         context.h delta.c delta.h shuffle-generic.c bitshuffle-generic.c trunc-prec.c trunc-prec.h
-        timestamp.c sframe.c directories.c blosc2-stdio.c)
+        timestamp.c sframe.c directories.c blosc2-stdio.c
+        caterva.c caterva_utils.c)
 if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
     if(COMPILER_SUPPORT_SSE2)
         message(STATUS "Adding run-time support for SSE2")
