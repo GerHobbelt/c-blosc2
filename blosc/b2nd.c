@@ -362,7 +362,7 @@ int b2nd_free(b2nd_array_t *array) {
 }
 
 
-int b2nd_from_buffer(b2nd_context_t *ctx, b2nd_array_t **array, void *buffer, int64_t buffersize) {
+int b2nd_from_cbuffer(b2nd_context_t *ctx, b2nd_array_t **array, void *buffer, int64_t buffersize) {
   BLOSC_ERROR_NULL(ctx, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
@@ -382,14 +382,14 @@ int b2nd_from_buffer(b2nd_context_t *ctx, b2nd_array_t **array, void *buffer, in
   int64_t start[B2ND_MAX_DIM] = {0};
   int64_t *stop = (*array)->shape;
   int64_t *shape = (*array)->shape;
-  BLOSC_ERROR(b2nd_set_slice_buffer(buffer, shape, buffersize, start, stop, *array));
+  BLOSC_ERROR(b2nd_set_slice_cbuffer(buffer, shape, buffersize, start, stop, *array));
 
   return BLOSC2_ERROR_SUCCESS;
 }
 
 
-int b2nd_to_buffer(b2nd_array_t *array, void *buffer,
-                   int64_t buffersize) {
+int b2nd_to_cbuffer(b2nd_array_t *array, void *buffer,
+                    int64_t buffersize) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
 
@@ -403,9 +403,7 @@ int b2nd_to_buffer(b2nd_array_t *array, void *buffer,
 
   int64_t start[B2ND_MAX_DIM] = {0};
   int64_t *stop = array->shape;
-  BLOSC_ERROR(b2nd_get_slice_buffer(array, start, stop,
-                                        buffer, array->shape, buffersize)
-                                        );
+  BLOSC_ERROR(b2nd_get_slice_cbuffer(array, start, stop, buffer, array->shape, buffersize));
   return BLOSC2_ERROR_SUCCESS;
 }
 
@@ -699,9 +697,9 @@ int get_set_slice(void *buffer, int64_t buffersize, int64_t *start, int64_t *sto
 }
 
 
-int b2nd_get_slice_buffer(b2nd_array_t *array,
-                          int64_t *start, int64_t *stop,
-                          void *buffer, int64_t *buffershape, int64_t buffersize) {
+int b2nd_get_slice_cbuffer(b2nd_array_t *array,
+                           int64_t *start, int64_t *stop,
+                           void *buffer, int64_t *buffershape, int64_t buffersize) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(start, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
@@ -730,9 +728,9 @@ int b2nd_get_slice_buffer(b2nd_array_t *array,
 }
 
 
-int b2nd_set_slice_buffer(void *buffer, int64_t *buffershape, int64_t buffersize,
-                          int64_t *start, int64_t *stop,
-                          b2nd_array_t *array) {
+int b2nd_set_slice_cbuffer(void *buffer, int64_t *buffershape, int64_t buffersize,
+                           int64_t *start, int64_t *stop,
+                           b2nd_array_t *array) {
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(start, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
@@ -811,10 +809,10 @@ int b2nd_get_slice(b2nd_context_t *ctx, b2nd_array_t **array, b2nd_array_t *src,
     }
     uint8_t *buffer = malloc(buffersize);
     BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_MEMORY_ALLOC);
-    BLOSC_ERROR(b2nd_get_slice_buffer(src, src_start, src_stop, buffer, chunk_shape,
-                                      buffersize));
-    BLOSC_ERROR(b2nd_set_slice_buffer(buffer, chunk_shape, buffersize, chunk_start,
-                                      chunk_stop, *array));
+    BLOSC_ERROR(b2nd_get_slice_cbuffer(src, src_start, src_stop, buffer, chunk_shape,
+                                       buffersize));
+    BLOSC_ERROR(b2nd_set_slice_cbuffer(buffer, chunk_shape, buffersize, chunk_start,
+                                       chunk_stop, *array));
     free(buffer);
   }
 
@@ -989,7 +987,7 @@ int b2nd_print_meta(b2nd_array_t *array) {
   BLOSC_ERROR(b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape));
   free(smeta);
 
-  printf("Caterva metalayer parameters: \n Ndim:       %d", ndim);
+  printf("b2nd metalayer parameters: \n Ndim:       %d", ndim);
   printf("\n Shape:      %" PRId64 "", shape[0]);
   for (int i = 1; i < ndim; ++i) {
     printf(", %" PRId64 "", shape[i]);
@@ -1238,7 +1236,7 @@ int b2nd_insert(b2nd_array_t *array, void *buffer, int64_t buffersize,
   int64_t stop[B2ND_MAX_DIM];
   memcpy(stop, array->shape, sizeof(int64_t) * array->ndim);
   stop[axis] = start[axis] + buffershape[axis];
-  BLOSC_ERROR(b2nd_set_slice_buffer(buffer, buffershape, buffersize, start, stop, array));
+  BLOSC_ERROR(b2nd_set_slice_cbuffer(buffer, buffershape, buffersize, start, stop, array));
 
   return BLOSC2_ERROR_SUCCESS;
 }
@@ -1662,9 +1660,9 @@ int b2nd_set_orthogonal_selection(b2nd_array_t *array, int64_t **selection, int6
 }
 
 
-int32_t b2nd_serialize_meta(int8_t ndim, int64_t *shape, const int32_t *chunkshape,
-                            const int32_t *blockshape, uint8_t **smeta) {
-  // Allocate space for Caterva metalayer
+int b2nd_serialize_meta(int8_t ndim, int64_t *shape, const int32_t *chunkshape,
+                        const int32_t *blockshape, uint8_t **smeta) {
+  // Allocate space for b2nd metalayer
   int32_t max_smeta_len = (int32_t) (1 + 1 + 1 + (1 + ndim * (1 + sizeof(int64_t))) +
                                      (1 + ndim * (1 + sizeof(int32_t))) + (1 + ndim * (1 + sizeof(int32_t))));
   *smeta = malloc((size_t) max_smeta_len);
@@ -1705,12 +1703,12 @@ int32_t b2nd_serialize_meta(int8_t ndim, int64_t *shape, const int32_t *chunksha
   }
   int32_t slen = (int32_t) (pmeta - *smeta);
 
-  return slen;
+  return (int)slen;
 }
 
 
-int32_t b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
-                              int32_t *chunkshape, int32_t *blockshape) {
+int b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
+                          int32_t *chunkshape, int32_t *blockshape) {
   BLOSC_UNUSED_PARAM(smeta_len);
   uint8_t *pmeta = smeta;
 
@@ -1727,7 +1725,7 @@ int32_t b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, i
   pmeta += 1;
 
   // shape entry
-  // Initialize to ones, as required by Caterva
+  // Initialize to ones, as required by b2nd
   for (int i = 0; i < ndim_aux; i++) shape[i] = 1;
   pmeta += 1;
   for (int8_t i = 0; i < ndim_aux; i++) {
@@ -1737,7 +1735,7 @@ int32_t b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, i
   }
 
   // chunkshape entry
-  // Initialize to ones, as required by Caterva
+  // Initialize to ones, as required by b2nd
   for (int i = 0; i < ndim_aux; i++) chunkshape[i] = 1;
   pmeta += 1;
   for (int8_t i = 0; i < ndim_aux; i++) {
@@ -1747,7 +1745,7 @@ int32_t b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, i
   }
 
   // blockshape entry
-  // Initialize to ones, as required by Caterva
+  // Initialize to ones, as required by b2nd
   for (int i = 0; i < ndim_aux; i++) blockshape[i] = 1;
   pmeta += 1;
   for (int8_t i = 0; i < ndim_aux; i++) {
@@ -1756,7 +1754,7 @@ int32_t b2nd_deserialize_meta(uint8_t *smeta, int32_t smeta_len, int8_t *ndim, i
     pmeta += sizeof(int32_t);
   }
   int32_t slen = (int32_t) (pmeta - smeta);
-  return slen;
+  return (int)slen;
 }
 
 

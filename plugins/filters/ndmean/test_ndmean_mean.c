@@ -39,6 +39,7 @@
 #include <inttypes.h>
 #include "blosc2/filters-registry.h"
 #include "../plugins/plugin_utils.h"
+#include "b2nd.h"
 
 #define EPSILON (float) (1)
 
@@ -96,7 +97,7 @@ static int test_ndmean(blosc2_schunk* schunk) {
     blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
     cparams.splitmode = BLOSC_ALWAYS_SPLIT;
     cparams.typesize = typesize;
-    cparams.compcode = BLOSC_ZSTD;
+    cparams.compcode = BLOSC_BLOSCLZ;
     cparams.filters[4] = BLOSC_FILTER_NDMEAN;
     cparams.filters_meta[4] = cellshape;
     cparams.filters[BLOSC2_MAX_FILTERS - 1] = BLOSC_SHUFFLE;
@@ -133,7 +134,7 @@ static int test_ndmean(blosc2_schunk* schunk) {
         csize = blosc2_compress_ctx(cctx, data_in, chunksize, data_out, chunksize + BLOSC2_MAX_OVERHEAD);
         if (csize == 0) {
             printf("Buffer is incompressible.  Giving up.\n");
-            return 0;
+            return -1;
         } else if (csize < 0) {
             printf("Compression error.  Error code: %" PRId64 "\n", csize);
             return (int) csize;
@@ -174,14 +175,14 @@ static int test_ndmean(blosc2_schunk* schunk) {
                 cell_mean = 0;
                 int cell_shape = cellshape;
                 if (cei == ncells - 1) {
-                    cell_shape = block_shape % cellshape;
+                    cell_shape = block_shape % cell_shape;
                 }
                 switch (typesize) {
                     case 4:
                         for (int i = 0; i < cell_shape; i++) {
                             cell_mean += ((float *) data_in)[ind + i];
                         }
-                        cell_mean /= cell_shape;
+                        cell_mean /= (float) cell_shape;
                         for (int i = 0; i < cell_shape; i++) {
                             if (!is_close(cell_mean, ((float *) data_dest)[ind + i])) {
                                 printf("i: %d, cell_mean %.9f, dest %.9f", ind + i, cell_mean, ((float *) data_dest)[ind + i]);
@@ -191,10 +192,13 @@ static int test_ndmean(blosc2_schunk* schunk) {
                         }
                         break;
                     case 8:
+                        printf("Cell_mean at 0: %f\n", cell_mean);
                         for (int i = 0; i < cell_shape; i++) {
                             cell_mean += ((double *) data_in)[ind + i];
                         }
-                        cell_mean /= cell_shape;
+                        printf("Cell_mean post sum: %f\n", cell_mean);
+                        cell_mean /= (double ) cell_shape;
+                        printf("Cell_mean post div: %f\n", cell_mean);
                         for (int i = 0; i < cell_shape; i++) {
                             if (!is_close(cell_mean, ((double *) data_dest)[ind + i])) {
                                 printf("i: %d, cell_mean %.9f, dest %.9f", ind + i, cell_mean, ((double *) data_dest)[ind + i]);
@@ -227,29 +231,128 @@ static int test_ndmean(blosc2_schunk* schunk) {
 
 
 int rows_matches() {
-    blosc2_schunk *schunk = blosc2_schunk_open("example_ndmean_1dim_2rows.b2nd");
+    int8_t ndim = 1;
+    int typesize = 8;
+    int64_t shape[] = {512};
+    int32_t chunkshape[] = {32};
+    int32_t blockshape[] = {16};
+    int64_t isize = 1;
+    for (int i = 0; i < ndim; ++i) {
+        isize *= (int)(shape[i]);
+    }
+    int64_t nbytes = typesize * isize;
+    double *data = malloc(nbytes);
+    for (int64_t i = 0; i < isize; i += 4) {
+        if ((i <= 20) || ((i >= 48) && (i <= 68)) || ((i >= 96) && (i <= 116))) {
+            data[i] = 0;
+            data[i + 1] = 1;
+            data[i + 2] = 2;
+            data[i + 3] = 3;
+        } else if (((i >= 24) && (i <= 44)) || ((i >= 72) && (i <= 92)) || ((i >= 120) && (i <= 140))){
+            data[i] = i;
+            data[i + 1] = i + 1;
+            data[i + 2] = i + 2;
+            data[i + 3] = i + 3;
+        } else {
+            data[i] = i;
+        }
+    }
+
+    blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
+    cparams.typesize = typesize;
+    blosc2_storage b2_storage = {.cparams=&cparams};
+    b2_storage.contiguous = true;
+
+    b2nd_context_t *ctx = b2nd_create_ctx(&b2_storage, ndim, shape, chunkshape, blockshape,
+                                          NULL, 0);
+
+    b2nd_array_t *arr;
+    BLOSC_ERROR(b2nd_from_cbuffer(ctx, &arr, data, nbytes));
+    blosc2_schunk *schunk = arr->sc;
 
     /* Run the test. */
     int result = test_ndmean(schunk);
-    blosc2_schunk_free(schunk);
+    BLOSC_ERROR(b2nd_free_ctx(ctx));
+    BLOSC_ERROR(b2nd_free(arr));
+    free(data);
     return result;
 }
 
 int same_cells() {
-    blosc2_schunk *schunk = blosc2_schunk_open("example_ndmean_1dim_same_cells.b2nd");
+    int8_t ndim = 1;
+    int typesize = 8;
+    int64_t shape[] = {512};
+    int32_t chunkshape[] = {32};
+    int32_t blockshape[] = {16};
+    int64_t isize = 1;
+    for (int i = 0; i < ndim; ++i) {
+        isize *= (int)(shape[i]);
+    }
+    int64_t nbytes = typesize * isize;
+    double *data = malloc(nbytes);
+    for (int64_t i = 0; i < isize; i += 4) {
+        data[i] = 0;
+        data[i + 1] = 1111111;
+        data[i + 2] = 2;
+        data[i + 3] = 1111111;
+    }
+
+    blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
+    cparams.typesize = typesize;
+    blosc2_storage b2_storage = {.cparams=&cparams};
+    b2_storage.contiguous = true;
+
+    b2nd_context_t *ctx = b2nd_create_ctx(&b2_storage, ndim, shape, chunkshape, blockshape,
+                                          NULL, 0);
+
+    b2nd_array_t *arr;
+    BLOSC_ERROR(b2nd_from_cbuffer(ctx, &arr, data, nbytes));
+    blosc2_schunk *schunk = arr->sc;
 
     /* Run the test. */
     int result = test_ndmean(schunk);
-    blosc2_schunk_free(schunk);
+    BLOSC_ERROR(b2nd_free_ctx(ctx));
+    BLOSC_ERROR(b2nd_free(arr));
+    free(data);
     return result;
 }
 
 int some_matches() {
-    blosc2_schunk *schunk = blosc2_schunk_open("example_ndmean_1dim_some_matches.b2nd");
+    int8_t ndim = 1;
+    int typesize = 8;
+    int64_t shape[] = {512};
+    int32_t chunkshape[] = {48};
+    int32_t blockshape[] = {14};
+    int64_t isize = 1;
+    for (int i = 0; i < ndim; ++i) {
+        isize *= (int)(shape[i]);
+    }
+    int64_t nbytes = typesize * isize;
+    double *data = malloc(nbytes);
+    for (int64_t i = 0; i < (isize / 2); i++) {
+        data[i] = (double ) i;
+    }
+    for (int64_t i = (isize / 2); i < isize; i++) {
+        data[i] = (double ) 1;
+    }
+
+    blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
+    cparams.typesize = typesize;
+    blosc2_storage b2_storage = {.cparams=&cparams};
+    b2_storage.contiguous = true;
+
+    b2nd_context_t *ctx = b2nd_create_ctx(&b2_storage, ndim, shape, chunkshape, blockshape,
+                                          NULL, 0);
+
+    b2nd_array_t *arr;
+    BLOSC_ERROR(b2nd_from_cbuffer(ctx, &arr, data, nbytes));
+    blosc2_schunk *schunk = arr->sc;
 
     /* Run the test. */
     int result = test_ndmean(schunk);
-    blosc2_schunk_free(schunk);
+    BLOSC_ERROR(b2nd_free_ctx(ctx));
+    BLOSC_ERROR(b2nd_free(arr));
+    free(data);
     return result;
 }
 
@@ -260,10 +363,16 @@ int main(void) {
   blosc2_init();
     result = rows_matches();
     printf("2_rows_matches: %d obtained \n \n", result);
+    if (result <= 0)
+        return -1;
     result = same_cells();
     printf("same_cells: %d obtained \n \n", result);
+    if (result <= 0)
+        return -1;
     result = some_matches();
     printf("some_matches: %d obtained \n \n", result);
+    if (result <= 0)
+        return -1;
   blosc2_destroy();
     return BLOSC2_ERROR_SUCCESS;
 }
