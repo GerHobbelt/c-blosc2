@@ -202,7 +202,7 @@ enum {
   BLOSC2_GLOBAL_REGISTERED_FILTERS_START = 32,
   BLOSC2_GLOBAL_REGISTERED_FILTERS_STOP = 159,
   //!< Blosc-registered filters must be between 32 - 159.
-  BLOSC2_GLOBAL_REGISTERED_FILTERS = 2,
+  BLOSC2_GLOBAL_REGISTERED_FILTERS = 3,
   //!< Number of Blosc-registered filters at the moment.
   BLOSC2_USER_REGISTERED_FILTERS_START = 160,
   BLOSC2_USER_REGISTERED_FILTERS_STOP = 255,
@@ -1166,6 +1166,10 @@ typedef struct {
   //!< The user-defined BTune parameters.
   bool instr_codec;
   //!< Whether the codec is instrumented or not
+  void *codec_params;
+  //!< User defined parameters for the codec
+  void *filter_params[BLOSC2_MAX_FILTERS];
+  //!< User defined parameters for the filters
 } blosc2_cparams;
 
 /**
@@ -1176,7 +1180,9 @@ static const blosc2_cparams BLOSC2_CPARAMS_DEFAULTS = {
         BLOSC_FORWARD_COMPAT_SPLIT, NULL,
         {0, 0, 0, 0, 0, BLOSC_SHUFFLE},
         {0, 0, 0, 0, 0, 0},
-        NULL, NULL, NULL, 0};
+        NULL, NULL, NULL, 0,
+        NULL, {NULL, NULL, NULL, NULL, NULL, NULL}
+        };
 
 
 /**

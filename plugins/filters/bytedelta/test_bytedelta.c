@@ -10,36 +10,34 @@
     Test program demonstrating use of the Blosc filter from C code.
     To compile this program:
 
-    $ gcc -O test_ndcell.c -o test_ndcell -lblosc2
+    $ gcc -O test_bytedelta.c -o test_bytedelta -lblosc2
 
     To run:
 
-    $ ./test_ndcell
+    $ ./test_bytedelta
     Successful roundtrip!
     Compression: 41472 -> 4937 (8.4x)
     rand: 36535 obtained
 
     Successful roundtrip!
     Compression: 1792 -> 1005 (1.8x)
-    same_cells: 787 obtained
+    mixed_values: 787 obtained
 
     Successful roundtrip!
     Compression: 16128 -> 1599 (10.1x)
-    some_matches: 14529 obtained
+    arange_like: 14529 obtained
 
 **********************************************************************/
 
 #include <stdio.h>
-#include "ndcell.h"
 #include <inttypes.h>
 #include "blosc2/filters-registry.h"
 #include "b2nd.h"
 
-static int test_ndcell(blosc2_schunk *schunk) {
+static int test_bytedelta(blosc2_schunk *schunk) {
 
   int64_t nchunks = schunk->nchunks;
   int32_t chunksize = (int32_t) (schunk->chunksize);
-  //   int isize = (int) array->extchunknitems * typesize;
   uint8_t *data_in = malloc(chunksize);
   int decompressed;
   int64_t csize;
@@ -50,24 +48,31 @@ static int test_ndcell(blosc2_schunk *schunk) {
 
   /* Create a context for compression */
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
-  cparams.splitmode = BLOSC_ALWAYS_SPLIT;
   cparams.typesize = schunk->typesize;
   cparams.compcode = BLOSC_LZ4;
-  cparams.filters[4] = BLOSC_FILTER_NDCELL;
-  cparams.filters_meta[4] = 4;
-  cparams.filters[BLOSC2_MAX_FILTERS - 1] = BLOSC_SHUFFLE;
+  cparams.filters[BLOSC2_MAX_FILTERS - 2] = BLOSC_SHUFFLE;
+  cparams.filters[BLOSC2_MAX_FILTERS - 1] = BLOSC_FILTER_BYTEDELTA;
+  cparams.filters_meta[BLOSC2_MAX_FILTERS - 1] = 0;  // 0 means typesize when using schunks
   cparams.clevel = 9;
   cparams.nthreads = 1;
   cparams.blocksize = schunk->blocksize;
   cparams.schunk = schunk;
   blosc2_context *cctx;
   cctx = blosc2_create_cctx(cparams);
+  if (cctx == NULL) {
+    printf("Cannot create compression context!\n");
+    return -1;
+  }
 
   blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
   dparams.nthreads = 1;
   dparams.schunk = schunk;
   blosc2_context *dctx;
   dctx = blosc2_create_dctx(dparams);
+  if (cctx == NULL) {
+    printf("Cannot create decompression context!\n");
+    return -1;
+  }
 
   for (int ci = 0; ci < nchunks; ci++) {
 
@@ -118,7 +123,7 @@ static int test_ndcell(blosc2_schunk *schunk) {
 
 
 int rand_() {
-  int ndim = 3;
+  int8_t ndim = 3;
   int typesize = 4;
   int64_t shape[] = {32, 18, 32};
   int32_t chunkshape[] = {17, 16, 24};
@@ -146,17 +151,16 @@ int rand_() {
   blosc2_schunk *schunk = arr->sc;
 
   /* Run the test. */
-  int result = test_ndcell(schunk);
+  int result = test_bytedelta(schunk);
   BLOSC_ERROR(b2nd_free_ctx(ctx));
   BLOSC_ERROR(b2nd_free(arr));
   free(data);
-
   return result;
 }
 
-int same_cells() {
-  int ndim = 2;
-  int typesize = 8;
+int mixed_values() {
+  int8_t ndim = 2;
+  int typesize = 4;
   int64_t shape[] = {128, 111};
   int32_t chunkshape[] = {32, 11};
   int32_t blockshape[] = {16, 7};
@@ -165,10 +169,10 @@ int same_cells() {
     nelem *= (int) (shape[i]);
   }
   int64_t size = typesize * nelem;
-  double *data = malloc(size);
-  for (int64_t i = 0; i < (nelem / 4); i++) {
-    data[i * 4] = (double) 11111111;
-    data[i * 4 + 1] = (double) 99999999;
+  int32_t *data = calloc(nelem, typesize);
+  for (int i = 0; i < (nelem / 4); i++) {
+    data[i * 4] = 11111111;
+    data[i * 4 + 1] = 99999999;
   }
 
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -184,7 +188,7 @@ int same_cells() {
   blosc2_schunk *schunk = arr->sc;
 
   /* Run the test. */
-  int result = test_ndcell(schunk);
+  int result = test_bytedelta(schunk);
   BLOSC_ERROR(b2nd_free_ctx(ctx));
   BLOSC_ERROR(b2nd_free(arr));
   free(data);
@@ -192,8 +196,8 @@ int same_cells() {
   return result;
 }
 
-int some_matches() {
-  int ndim = 2;
+int arange_like() {
+  int8_t ndim = 2;
   int typesize = 8;
   int64_t shape[] = {128, 111};
   int32_t chunkshape[] = {48, 32};
@@ -204,11 +208,8 @@ int some_matches() {
   }
   int64_t size = typesize * nelem;
   double *data = malloc(size);
-  for (int64_t i = 0; i < (nelem / 2); i++) {
+  for (int64_t i = 0; i < nelem; i++) {
     data[i] = (double) i;
-  }
-  for (int64_t i = (nelem / 2); i < nelem; i++) {
-    data[i] = (double) 1;
   }
 
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -224,7 +225,7 @@ int some_matches() {
   blosc2_schunk *schunk = arr->sc;
 
   /* Run the test. */
-  int result = test_ndcell(schunk);
+  int result = test_bytedelta(schunk);
   BLOSC_ERROR(b2nd_free_ctx(ctx));
   BLOSC_ERROR(b2nd_free(arr));
   free(data);
@@ -236,18 +237,22 @@ int some_matches() {
 int main(void) {
   int result;
   blosc2_init();
+
   result = rand_();
-  printf("rand: %d obtained \n \n", result);
+  printf("rand: saved %d bytes \n \n", result);
   if (result < 0)
     return result;
-  result = same_cells();
-  printf("same_cells: %d obtained \n \n", result);
+
+  result = mixed_values();
+  printf("mixed_values: saved %d bytes \n \n", result);
   if (result < 0)
     return result;
-  result = some_matches();
-  printf("some_matches: %d obtained \n \n", result);
+
+  result = arange_like();
+  printf("arange_like: saved %d bytes \n \n", result);
   if (result < 0)
     return result;
+
   blosc2_destroy();
   return BLOSC2_ERROR_SUCCESS;
 }
